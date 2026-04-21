@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080a0c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="STR Monitor">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<title>Radio Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@200;300;400;500&family=DM+Mono:wght@300;400;500&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   BASE RESET & LAYOUT
+═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: clamp(14px, 1.4vw, 22px); }
+
+/* Skin transition overlay */
+#skinTransition {
+  position: fixed; inset: 0; z-index: 500;
+  background: #000;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+#skinTransition.flash { opacity: 1; }
+
+/* Skin change toast */
+#skinToast {
+  position: fixed; bottom: 2rem; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1a1e28; border: 1px solid #444858;
+  border-radius: 6px; padding: 0.6rem 1.4rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.85rem; color: #e8ecf8;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  z-index: 600; opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#skinToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#skinToast .toast-skin { color: #40c4ff; font-weight: 600; }
+
+body {
+  min-height: 100vh; height: 100vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+#app { flex: 1; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.6s ease 0.3s; height: 100vh; }
+#app.visible { opacity: 1; }
+#main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+#channels { display: grid; grid-template-columns: 1fr 1fr; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════════
+   SKIN: BROADCAST
+═══════════════════════════════════════════════ */
+body.skin-broadcast {
+  font-family: 'Barlow Condensed', sans-serif;
+  background: #080a0c; color: #d8dde8;
+  --bg: #080a0c; --panel: #0f1115; --panel2: #141720;
+  --inset: #07080b; --border: #2e3240; --border2: #444858;
+  --text: #d8dde8; --text-dim: #8892a8; --text-bright: #ffffff;
+  --green: #00ff88; --green2: #00dd70; --yellow: #ffe040;
+  --red: #ff2255; --blue: #40d0ff; --amber: #ffbb20;
+  --seg-off: #0c1f10; --seg-off-y: #1e1800; --seg-off-r: #1e0608;
+  --radius: 2px; --ch-freq-size: 3.2rem;
+}
+/* ═══════════════════════════════════════════════
+   SKIN: CYBERPUNK
+═══════════════════════════════════════════════ */
+body.skin-cyberpunk {
+  font-family: 'Share Tech Mono', monospace;
+  background: #05060a; color: #00fff5;
+  --bg: #05060a; --panel: #080c12; --panel2: #0a0f18;
+  --inset: #030508; --border: #0a2a30; --border2: #0d3d46;
+  --text: #00fff5; --text-dim: #0a6068; --text-bright: #ffffff;
+  --green: #00fff5; --green2: #00d4cc; --yellow: #f0e030;
+  --red: #ff0055; --blue: #bf00ff; --amber: #ff6600;
+  --seg-off: #020e10; --seg-off-y: #100800; --seg-off-r: #100015;
+  --radius: 0px; --ch-freq-size: 3rem;
+}
+/* ═══════════════════════════════════════════════
+   SKIN: MINIMAL
+═══════════════════════════════════════════════ */
+body.skin-minimal {
+  font-family: 'DM Sans', sans-serif;
+  background: #0d0d0f; color: rgba(255,255,255,0.6);
+  --bg: #0d0d0f; --panel: #141416; --panel2: #1c1c1f;
+  --inset: #0b0b0d; --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+  --text: rgba(255,255,255,0.6); --text-dim: rgba(255,255,255,0.25); --text-bright: rgba(255,255,255,0.92);
+  --green: #34d399; --green2: #10b981; --yellow: #fbbf24;
+  --red: #f87171; --blue: #60a5fa; --amber: #fbbf24;
+  --seg-off: #0f1f18; --seg-off-y: #1a1500; --seg-off-r: #1a0a0a;
+  --radius: 8px; --ch-freq-size: 2.8rem;
+}
+/* ═══════════════════════════════════════════════
+   SKIN: RETRO
+═══════════════════════════════════════════════ */
+body.skin-retro {
+  font-family: 'VT323', monospace;
+  background: #0a0800; color: #c8a030;
+  --bg: #0a0800; --panel: #0f0c00; --panel2: #141000;
+  --inset: #080600; --border: #2a2000; --border2: #3a2e00;
+  --text: #c8a030; --text-dim: #5a4810; --text-bright: #ffd060;
+  --green: #c8a030; --green2: #b08820; --yellow: #ffd060;
+  --red: #ff4400; --blue: #c8a030; --amber: #ffd060;
+  --seg-off: #140e00; --seg-off-y: #140e00; --seg-off-r: #140800;
+  --radius: 0px; --ch-freq-size: 3.2rem;
+}
+
+/* scanlines retro */
+body.skin-retro::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.18) 2px, rgba(0,0,0,0.18) 4px);
+}
+/* cyberpunk grid */
+body.skin-cyberpunk::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(0,255,245,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,245,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+#app { position: relative; z-index: 1; }
+
+/* ═══════════════════════════════════════════════
+   INTRO / SKIN PICKER
+═══════════════════════════════════════════════ */
+#intro {
+  position: fixed; inset: 0; background: #060708;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2.5rem; z-index: 300;
+  transition: opacity 0.7s ease;
+}
+#intro.fade-out { opacity: 0; pointer-events: none; }
+
+.intro-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem; letter-spacing: 0.3em;
+  text-transform: uppercase; color: #4a5060;
+  text-align: center;
+}
+.intro-title span { color: #40c4ff; }
+
+.skin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem; width: min(600px, 90vw);
+}
+
+.skin-card {
+  border: 1px solid #252830;
+  border-radius: 6px; overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  background: #111316;
+}
+.skin-card:hover { border-color: #40c4ff; transform: translateY(-2px); }
+.skin-card.selected { border-color: #40c4ff; border-width: 2px; }
+
+.skin-preview {
+  height: 90px; width: 100%;
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
+
+/* Preview: Broadcast */
+.preview-broadcast {
+  background: #0b0c0e;
+  border-bottom: 2px solid #252830;
+}
+.preview-broadcast .p-header {
+  height: 22px; background: #17191e;
+  border-bottom: 1px solid #252830;
+  display: flex; align-items: center; padding: 0 8px; gap: 6px;
+}
+.preview-broadcast .p-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff1744; }
+.preview-broadcast .p-bar { flex: 1; height: 3px; background: #252830; border-radius: 1px; }
+.preview-broadcast .p-time { font-family: 'Share Tech Mono', monospace; font-size: 8px; color: #edf0f8; }
+.preview-broadcast .p-body { flex: 1; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.preview-broadcast .p-freq { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: #edf0f8; line-height: 1; }
+.preview-broadcast .p-segs { height: 6px; background: #060809; border-radius: 1px; display: flex; gap: 1px; padding: 1px; }
+.preview-broadcast .p-seg { flex: 1; border-radius: 1px; }
+.preview-broadcast .p-seg.g { background: #00c853; }
+.preview-broadcast .p-seg.y { background: #ffea00; }
+.preview-broadcast .p-seg.r { background: #ff1744; }
+.preview-broadcast .p-seg.off { background: #0a1a0c; }
+
+/* Preview: Cyberpunk */
+.preview-cyberpunk {
+  background: #05060a;
+  border-bottom: 2px solid #0a2a30;
+}
+.preview-cyberpunk .p-header {
+  height: 22px; background: #0a0f18;
+  border-bottom: 1px solid #0a2a30;
+  display: flex; align-items: center; padding: 0 8px; gap: 6px;
+}
+.preview-cyberpunk .p-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff0055; box-shadow: 0 0 6px #ff0055; }
+.preview-cyberpunk .p-bar { flex: 1; height: 2px; background: #0a2a30; }
+.preview-cyberpunk .p-time { font-family: 'Share Tech Mono', monospace; font-size: 8px; color: #00fff5; }
+.preview-cyberpunk .p-body { flex: 1; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.preview-cyberpunk .p-freq { font-family: 'Share Tech Mono', monospace; font-size: 20px; font-weight: 700; color: #00fff5; line-height: 1; text-shadow: 0 0 8px #00fff5; }
+.preview-cyberpunk .p-segs { height: 6px; background: #030508; display: flex; gap: 1px; padding: 1px; }
+.preview-cyberpunk .p-seg { flex: 1; }
+.preview-cyberpunk .p-seg.g { background: #00fff5; box-shadow: 0 0 4px #00fff5; }
+.preview-cyberpunk .p-seg.y { background: #f0e030; }
+.preview-cyberpunk .p-seg.r { background: #ff0055; box-shadow: 0 0 4px #ff0055; }
+.preview-cyberpunk .p-seg.off { background: #020e10; }
+.preview-cyberpunk::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,245,0.04) 3px, rgba(0,255,245,0.04) 4px);
+}
+
+/* Preview: Minimal */
+.preview-minimal {
+  background: #0d0d0f;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.preview-minimal .p-header {
+  height: 22px; background: #141416;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex; align-items: center; padding: 0 10px; gap: 6px;
+}
+.preview-minimal .p-dot { width: 5px; height: 5px; border-radius: 50%; background: #34d399; }
+.preview-minimal .p-bar { flex: 1; }
+.preview-minimal .p-time { font-family: 'DM Mono', monospace; font-size: 8px; color: rgba(255,255,255,0.4); }
+.preview-minimal .p-body { flex: 1; padding: 6px 10px; display: flex; flex-direction: column; gap: 5px; }
+.preview-minimal .p-freq { font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 200; color: rgba(255,255,255,0.92); line-height: 1; }
+.preview-minimal .p-segs { height: 4px; background: #1c1c1f; border-radius: 2px; display: flex; gap: 1px; overflow: hidden; }
+.preview-minimal .p-seg { flex: 1; }
+.preview-minimal .p-seg.g { background: #10b981; }
+.preview-minimal .p-seg.y { background: #fbbf24; }
+.preview-minimal .p-seg.r { background: #f87171; }
+.preview-minimal .p-seg.off { background: #1c1c1f; }
+
+/* Preview: Retro */
+.preview-retro {
+  background: #0a0800;
+  border-bottom: 2px solid #2a2000;
+  position: relative;
+}
+.preview-retro::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px);
+}
+.preview-retro .p-header {
+  height: 22px; background: #141000;
+  border-bottom: 1px solid #2a2000;
+  display: flex; align-items: center; padding: 0 8px; gap: 6px;
+}
+.preview-retro .p-dot { width: 6px; height: 6px; border-radius: 50%; background: #c8a030; box-shadow: 0 0 6px #c8a030; }
+.preview-retro .p-bar { flex: 1; height: 2px; background: #2a2000; }
+.preview-retro .p-time { font-family: 'VT323', monospace; font-size: 11px; color: #c8a030; }
+.preview-retro .p-body { flex: 1; padding: 4px 8px; display: flex; flex-direction: column; gap: 3px; }
+.preview-retro .p-freq { font-family: 'VT323', monospace; font-size: 24px; color: #ffd060; line-height: 1; text-shadow: 0 0 10px #c8a030; }
+.preview-retro .p-segs { height: 6px; background: #080600; display: flex; gap: 1px; padding: 1px; }
+.preview-retro .p-seg { flex: 1; }
+.preview-retro .p-seg.g { background: #c8a030; box-shadow: 0 0 4px #c8a030; }
+.preview-retro .p-seg.y { background: #ffd060; }
+.preview-retro .p-seg.r { background: #ff4400; }
+.preview-retro .p-seg.off { background: #140e00; }
+
+.skin-info {
+  padding: 8px 10px;
+  background: #0d0f12;
+  border-top: 1px solid #252830;
+}
+.skin-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: #b8bdc8;
+}
+.skin-desc {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.55rem; color: #4a5060;
+  letter-spacing: 0.05em; margin-top: 2px;
+}
+.skin-card.selected .skin-name { color: #40c4ff; }
+
+#startBtn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.1rem; font-weight: 700;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  background: none; border: 2px solid #40c4ff;
+  color: #40c4ff; padding: 0.9rem 4rem;
+  border-radius: 3px; cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  opacity: 1; pointer-events: all;
+}
+#startBtn.ready { opacity: 1; pointer-events: all; }
+#startBtn:hover { background: #40c4ff; color: #000; }
+#startBtn.ready:hover { background: #40c4ff; color: #000; }
+
+/* ═══════════════════════════════════════════════
+   TOP BAR (shared structure, themed by skin)
+═══════════════════════════════════════════════ */
+#topbar {
+  background: var(--panel2);
+  border-bottom: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem; height: 5.5rem; flex-shrink: 0; position: relative;
+}
+.tb-left { display: flex; align-items: center; gap: 1rem; }
+.tb-logo {
+  font-size: 1.4rem; font-weight: 700;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--text-bright);
+}
+.tb-logo span { color: var(--blue); }
+.skin-broadcast .tb-logo { font-family: 'Barlow Condensed', sans-serif; }
+.skin-cyberpunk .tb-logo { font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; text-shadow: 0 0 10px var(--blue); }
+.skin-minimal   .tb-logo { font-family: 'DM Sans', sans-serif; font-weight: 300; letter-spacing: 0.1em; }
+.skin-retro     .tb-logo { font-family: 'VT323', monospace; font-size: 1.4rem; text-shadow: 0 0 10px var(--amber); }
+
+.tb-sep { width: 1px; height: 1.5rem; background: var(--border2); }
+.tb-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.95rem; color: var(--text-bright); letter-spacing: 0.06em;
+}
+
+.tb-center {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.on-air-lamp {
+  width: 1rem; height: 1rem; border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 1.2rem var(--red), 0 0 3rem rgba(255,23,68,0.5);
+  animation: onair 1.4s ease-in-out infinite;
+}
+@keyframes onair { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.on-air-text {
+  font-size: 1.6rem; font-weight: 700;
+  letter-spacing: 0.35em; color: var(--red); text-transform: uppercase;
+}
+.skin-broadcast .on-air-text { font-family: 'Barlow Condensed', sans-serif; }
+.skin-cyberpunk .on-air-text { font-family: 'Share Tech Mono', monospace; text-shadow: 0 0 8px var(--red); }
+.skin-minimal   .on-air-text { font-family: 'DM Sans', sans-serif; font-size: 0.7rem; letter-spacing: 0.15em; }
+.skin-retro     .on-air-text { font-family: 'VT323', monospace; font-size: 1.1rem; text-shadow: 0 0 8px var(--red); }
+
+.tb-right { display: flex; align-items: center; gap: 0.75rem; }
+.tb-clock {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 2.4rem; color: var(--text-bright); letter-spacing: 0.05em;
+}
+.skin-retro .tb-clock { font-family: 'VT323', monospace; font-size: 1.6rem; text-shadow: 0 0 8px var(--amber); }
+.skin-minimal .tb-clock { font-family: 'DM Mono', monospace; font-size: 1.1rem; }
+
+/* Skin switcher in header */
+.skin-switcher {
+  display: flex; gap: 4px; align-items: center;
+}
+.sw-btn {
+  width: 24px; height: 24px; border-radius: 3px;
+  border: 1px solid var(--border2);
+  cursor: pointer; transition: border-color 0.2s, transform 0.15s;
+  background: var(--inset);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  position: relative;
+}
+.sw-btn:hover { border-color: var(--blue); transform: scale(1.1); }
+.sw-btn.active { border-color: var(--green); border-width: 2px; }
+.sw-btn[data-skin="broadcast"] { background: #111316; }
+.sw-btn[data-skin="cyberpunk"] { background: #080c12; }
+.sw-btn[data-skin="minimal"]   { background: #141416; }
+.sw-btn[data-skin="retro"]     { background: #0f0c00; }
+.sw-dot {
+  width: 8px; height: 8px; border-radius: 1px;
+}
+.sw-btn[data-skin="broadcast"] .sw-dot { background: #40c4ff; }
+.sw-btn[data-skin="cyberpunk"] .sw-dot { background: #00fff5; box-shadow: 0 0 4px #00fff5; }
+.sw-btn[data-skin="minimal"]   .sw-dot { background: #34d399; }
+.sw-btn[data-skin="retro"]     .sw-dot { background: #c8a030; box-shadow: 0 0 4px #c8a030; }
+
+/* ═══════════════════════════════════════════════
+   CHANNELS
+═══════════════════════════════════════════════ */
+.channel {
+  background: var(--panel);
+  border-right: 2px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.channel:last-child { border-right: none; }
+
+/* cyberpunk channel border */
+.skin-cyberpunk .channel { border-right-color: var(--border2); }
+.skin-cyberpunk .channel:last-child { border-right: none; }
+
+.ch-header {
+  background: var(--panel2); border-bottom: 2px solid var(--border);
+  padding: 0.8rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ch-id { display: flex; align-items: baseline; gap: 0.6rem; }
+.ch-num {
+  font-size: 0.8rem; font-weight: 600;
+  letter-spacing: 0.25em; color: var(--text); text-transform: uppercase;
+}
+.skin-broadcast .ch-num { font-family: 'Barlow Condensed', sans-serif; }
+.skin-cyberpunk .ch-num { font-family: 'Share Tech Mono', monospace; color: var(--blue); }
+.skin-minimal   .ch-num { font-family: 'DM Mono', monospace; font-size: 0.6rem; }
+.skin-retro     .ch-num { font-family: 'VT323', monospace; font-size: 0.9rem; color: var(--text-dim); }
+
+.ch-freq {
+  font-size: var(--ch-freq-size, 3.2rem);
+  font-weight: 700; color: var(--text-bright);
+  line-height: 1; letter-spacing: 0.01em;
+}
+.skin-broadcast .ch-freq { font-family: 'Barlow Condensed', sans-serif; }
+.skin-cyberpunk .ch-freq { font-family: 'Share Tech Mono', monospace; text-shadow: 0 0 15px var(--green); }
+.skin-minimal   .ch-freq { font-family: 'DM Sans', sans-serif; font-weight: 200; }
+.skin-retro     .ch-freq { font-family: 'VT323', monospace; text-shadow: 0 0 12px var(--amber); }
+
+.ch-band {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.2rem; color: var(--blue);
+  align-self: flex-end; margin-bottom: 0.25rem;
+}
+.skin-cyberpunk .ch-band { text-shadow: 0 0 8px var(--blue); color: var(--blue); }
+.skin-retro .ch-band { font-family: 'VT323', monospace; font-size: 1.1rem; color: var(--amber); }
+
+/* Status badge */
+.ch-status {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  background: var(--inset);
+}
+.ch-status .led {
+  width: 0.8rem; height: 0.8rem; border-radius: 50%;
+  background: var(--text-dim); transition: background 0.3s, box-shadow 0.3s;
+}
+.ch-status.online .led  { background: var(--green2); box-shadow: 0 0 8px var(--green2); }
+.ch-status.offline .led { background: var(--red); }
+.ch-status.loading .led { background: var(--amber); animation: blink 0.7s infinite; }
+.ch-status.buffering .led { background: var(--yellow); animation: blink 0.4s infinite; }
+.ch-status.silence .led { background: var(--amber); animation: blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.1} }
+.ch-status-text {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.85rem; letter-spacing: 0.1em;
+  color: var(--text); text-transform: uppercase;
+}
+.skin-retro .ch-status-text { font-family: 'VT323', monospace; font-size: 0.9rem; }
+.ch-status.online .ch-status-text  { color: var(--green); font-weight: 600; }
+.ch-status.offline .ch-status-text { color: var(--red); font-weight: 600; }
+.ch-status.buffering .ch-status-text { color: var(--yellow); font-weight: 600; }
+.ch-status.silence .ch-status-text { color: var(--amber); font-weight: 600; }
+
+/* ── VU ── */
+.ch-vu {
+  padding: 1rem 1.5rem 0.7rem;
+  display: flex; flex-direction: column; gap: 0.55rem;
+  border-bottom: 1px solid var(--border);
+}
+.vu-row { display: flex; align-items: center; gap: 0.7rem; }
+.vu-ch {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.85rem; color: var(--text);
+  width: 1rem; text-align: right; flex-shrink: 0;
+}
+.skin-retro .vu-ch { font-family: 'VT323', monospace; font-size: 0.9rem; }
+
+.vu-segs {
+  flex: 1; height: 1.8rem;
+  display: flex; gap: 2px; align-items: stretch;
+  background: var(--inset);
+  padding: 2px 3px; border-radius: var(--radius);
+  border: 1px solid var(--border2);
+}
+.seg { flex: 1; border-radius: 1px; transition: background 0.04s; }
+.seg.z-g  { background: var(--seg-off); }
+.seg.z-g.lit  { background: var(--green2); box-shadow: 0 0 4px var(--green); }
+.seg.z-y  { background: var(--seg-off-y); }
+.seg.z-y.lit  { background: var(--yellow); box-shadow: 0 0 4px var(--yellow); }
+.seg.z-r  { background: var(--seg-off-r); }
+.seg.z-r.lit  { background: var(--red); box-shadow: 0 0 5px var(--red); }
+
+.vu-db {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.9rem; color: var(--text-bright);
+  width: 5rem; text-align: right; flex-shrink: 0;
+}
+.skin-retro .vu-db { font-family: 'VT323', monospace; font-size: 0.9rem; }
+
+.vu-scale { display: flex; padding-left: 1.5rem; margin-top: 0.1rem; }
+.vu-scale-inner { flex: 1; display: flex; justify-content: space-between; padding: 0 3px; }
+.vu-scale span {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.65rem; color: var(--text);
+}
+
+/* ── META ── */
+.ch-meta { display: flex; border-bottom: 1px solid var(--border); }
+.meta-cell {
+  flex: 1; padding: 0.6rem 1rem;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+.meta-cell:last-child { border-right: none; }
+.meta-lbl {
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--text);
+}
+.skin-broadcast .meta-lbl { font-family: 'Barlow Condensed', sans-serif; }
+.skin-cyberpunk .meta-lbl { font-family: 'Share Tech Mono', monospace; color: var(--blue); font-size: 0.48rem; }
+.skin-minimal   .meta-lbl { font-family: 'DM Sans', sans-serif; font-weight: 500; }
+.skin-retro     .meta-lbl { font-family: 'VT323', monospace; font-size: 0.75rem; }
+.meta-val {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1.1rem; color: var(--text-bright);
+}
+.skin-retro .meta-val { font-family: 'VT323', monospace; font-size: 1.1rem; }
+.skin-minimal .meta-val { font-family: 'DM Mono', monospace; font-size: 0.8rem; }
+.meta-val.good { color: var(--green2); }
+.meta-val.warn { color: var(--amber); }
+.meta-val.bad  { color: var(--red); }
+.skin-cyberpunk .meta-val.good { text-shadow: 0 0 8px var(--green2); }
+.skin-cyberpunk .meta-val.bad  { text-shadow: 0 0 8px var(--red); }
+.skin-retro .meta-val.good { text-shadow: 0 0 8px var(--green2); }
+
+.sig-bars { display: flex; align-items: flex-end; gap: 3px; height: 1.4rem; }
+.sig-bar { width: 6px; border-radius: 1px; background: var(--border2); transition: background 0.3s; }
+.sig-bar.on { background: var(--green2); }
+.skin-cyberpunk .sig-bar.on { box-shadow: 0 0 4px var(--green2); }
+
+/* ── FADER ── */
+.ch-fader { padding: 0.7rem 1.5rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.fader-header { display: flex; justify-content: space-between; align-items: center; }
+.fader-lbl {
+  font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--text);
+}
+.skin-broadcast .fader-lbl { font-family: 'Barlow Condensed', sans-serif; }
+.skin-cyberpunk .fader-lbl { font-family: 'Share Tech Mono', monospace; color: var(--blue); }
+.skin-minimal   .fader-lbl { font-family: 'DM Sans', sans-serif; }
+.skin-retro     .fader-lbl { font-family: 'VT323', monospace; font-size: 0.8rem; }
+.fader-right { display: flex; align-items: center; gap: 0.6rem; }
+.fader-val {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem; color: var(--text-bright);
+}
+.skin-retro .fader-val { font-family: 'VT323', monospace; font-size: 1.1rem; }
+.mute-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.8rem; font-weight: 700; letter-spacing: 0.15em;
+  background: var(--inset); border: 1px solid var(--border2);
+  color: var(--text); padding: 0.35rem 0.8rem;
+  border-radius: var(--radius); cursor: pointer; transition: all 0.15s;
+  text-transform: uppercase;
+}
+.skin-cyberpunk .mute-btn { font-family: 'Share Tech Mono', monospace; }
+.skin-retro .mute-btn { font-family: 'VT323', monospace; font-size: 0.9rem; }
+.skin-minimal .mute-btn { font-family: 'DM Sans', sans-serif; border-radius: 6px; }
+.mute-btn:hover { border-color: var(--red); color: var(--red); }
+.mute-btn.muted { border-color: var(--red); color: var(--red); background: rgba(255,23,68,0.1); }
+.skin-cyberpunk .mute-btn.muted { box-shadow: 0 0 8px rgba(255,0,85,0.3); }
+
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px;
+  background: var(--inset); border-radius: 2px;
+  outline: none; cursor: pointer; border: 1px solid var(--border);
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1rem; height: 1.8rem;
+  background: var(--panel2); border: 1px solid var(--border2);
+  border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s;
+}
+.skin-minimal input[type=range]::-webkit-slider-thumb { border-radius: 50%; width: 14px; height: 14px; }
+input[type=range]::-webkit-slider-thumb:hover { border-color: var(--blue); }
+input[type=range]::-moz-range-thumb {
+  width: 1rem; height: 1.8rem;
+  background: var(--panel2); border: 1px solid var(--border2);
+  border-radius: var(--radius); cursor: pointer;
+}
+
+/* cyberpunk range accent */
+.skin-cyberpunk input[type=range] { border-color: var(--border2); }
+
+/* clock removed */
+
+
+/* ═══════════════════════════════════════════════
+   EVENT LOG
+═══════════════════════════════════════════════ */
+#logSection {
+  background: var(--panel);
+  border-top: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+  max-height: 220px;
+  display: flex; flex-direction: column;
+  transition: max-height 0.3s ease;
+}
+#logSection.collapsed { max-height: 42px; overflow: hidden; }
+
+#logHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem; height: 42px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel2);
+}
+#logTitle {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-size: 0.85rem; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--text-bright);
+}
+.skin-broadcast #logTitle { font-family: "Barlow Condensed", sans-serif; }
+.skin-cyberpunk #logTitle { font-family: "Share Tech Mono", monospace; color: var(--blue); font-size: 0.6rem; }
+.skin-minimal   #logTitle { font-family: "DM Sans", sans-serif; font-weight: 500; }
+.skin-retro     #logTitle { font-family: "VT323", monospace; font-size: 0.9rem; text-shadow: 0 0 6px var(--amber); }
+
+.log-icon { color: var(--blue); font-size: 0.7rem; }
+.skin-retro .log-icon { color: var(--amber); }
+
+.log-count {
+  background: var(--inset); border: 1px solid var(--border2);
+  border-radius: 3px; padding: 0.1rem 0.4rem;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.8rem; color: var(--text-bright);
+  min-width: 1.5rem; text-align: center;
+}
+
+#logActions { display: flex; gap: 0.5rem; align-items: center; }
+.log-btn {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.12em;
+  background: var(--inset); border: 1px solid var(--border2);
+  color: var(--text); padding: 0.25rem 0.7rem;
+  border-radius: var(--radius); cursor: pointer; transition: all 0.15s;
+  text-transform: uppercase;
+}
+.skin-cyberpunk .log-btn { font-family: "Share Tech Mono", monospace; }
+.skin-retro .log-btn { font-family: "VT323", monospace; font-size: 0.8rem; }
+.log-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+#logBody {
+  flex: 1; overflow-y: auto; padding: 0.4rem 0;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+#logBody::-webkit-scrollbar { width: 4px; }
+#logBody::-webkit-scrollbar-track { background: transparent; }
+#logBody::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+#logEmpty {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.6rem; color: var(--text-dim);
+  text-align: center; padding: 1rem;
+  letter-spacing: 0.1em;
+}
+
+.log-entry {
+  display: flex; align-items: baseline; gap: 0.75rem;
+  padding: 0.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  animation: logFadeIn 0.3s ease;
+}
+@keyframes logFadeIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+.log-entry:hover { background: var(--panel2); }
+.log-entry:last-child { border-bottom: none; }
+
+.log-time {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.8rem; color: var(--text);
+  flex-shrink: 0; width: 5.5rem;
+}
+.log-ch {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.8rem; flex-shrink: 0; width: 5rem;
+  font-weight: 600; letter-spacing: 0.08em;
+}
+.log-ch.ch1 { color: var(--blue); }
+.log-ch.ch2 { color: var(--amber); }
+.skin-retro .log-ch { text-shadow: 0 0 6px currentColor; }
+
+.log-state {
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.8rem; flex-shrink: 0; width: 6rem;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.log-state.online    { color: var(--green2); }
+.log-state.offline   { color: var(--red); }
+.log-state.error     { color: var(--red); }
+.log-state.buffering { color: var(--yellow); }
+.log-state.stalled   { color: var(--amber); }
+.log-state.silence   { color: var(--amber); }
+.log-state.loading   { color: var(--text-dim); }
+
+.log-diag {
+  font-size: 0.8rem; color: var(--text);
+  flex: 1; letter-spacing: 0.04em;
+}
+.skin-broadcast .log-diag { font-family: "Barlow Condensed", sans-serif; font-size: 0.7rem; }
+.skin-retro .log-diag { font-family: "VT323", monospace; font-size: 0.85rem; }
+.skin-minimal .log-diag { font-family: "DM Sans", sans-serif; }
+.log-diag.bad { color: var(--red); }
+.log-diag.warn { color: var(--amber); }
+
+/* ── ALERT FLASH ── */
+.channel.alert-flash { animation: alertFlash 0.5s ease infinite alternate; }
+@keyframes alertFlash {
+  from { background: var(--panel); }
+  to   { background: rgba(255, 23, 68, 0.08); }
+}
+.skin-cyberpunk .channel.alert-flash {
+  animation: alertFlashCyber 0.5s ease infinite alternate;
+}
+@keyframes alertFlashCyber {
+  from { background: var(--panel); }
+  to   { background: rgba(255, 0, 85, 0.1); border-color: var(--red); }
+}
+.skin-retro .channel.alert-flash {
+  animation: alertFlashRetro 0.5s ease infinite alternate;
+}
+@keyframes alertFlashRetro {
+  from { background: var(--panel); }
+  to   { background: rgba(255, 68, 0, 0.1); }
+}
+
+/* ═══════════════════════════════════════════════
+   STATS ROW
+═══════════════════════════════════════════════ */
+.ch-stats {
+  display: flex; border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+.stat-cell {
+  flex: 1; padding: 0.45rem 0.75rem;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.stat-cell:last-child { border-right: none; }
+.stat-lbl {
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text);
+}
+.skin-broadcast .stat-lbl { font-family: 'Barlow Condensed', sans-serif; font-size: 0.52rem; }
+.skin-cyberpunk .stat-lbl { font-family: 'Share Tech Mono', monospace; color: var(--blue); font-size: 0.46rem; }
+.skin-retro     .stat-lbl { font-family: 'VT323', monospace; font-size: 0.72rem; }
+.skin-minimal   .stat-lbl { font-family: 'DM Sans', sans-serif; }
+.stat-val {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem; color: var(--text-bright);
+}
+.skin-retro .stat-val { font-family: 'VT323', monospace; font-size: 1rem; }
+.skin-minimal .stat-val { font-family: 'DM Mono', monospace; font-size: 0.72rem; }
+.stat-val.good { color: var(--green2); }
+.stat-val.warn { color: var(--amber); }
+.stat-val.bad  { color: var(--red); }
+
+/* ── TIMELINE ── */
+.ch-timeline-wrap {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.tl-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.7rem; color: var(--text);
+  flex-shrink: 0; letter-spacing: 0.06em;
+}
+.ch-timeline {
+  flex: 1; height: 14px;
+  display: flex; gap: 1px;
+  background: var(--inset);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.tl-seg {
+  flex: 1; height: 100%;
+  background: var(--seg-off);
+  transition: background 0.3s;
+}
+.tl-seg.tl-online    { background: var(--green2); }
+.tl-seg.tl-buffering { background: var(--yellow); }
+.tl-seg.tl-stalled   { background: var(--amber); }
+.tl-seg.tl-silence   { background: var(--amber); opacity: 0.7; }
+.tl-seg.tl-offline   { background: var(--red); }
+.tl-seg.tl-error     { background: var(--red); opacity: 0.8; }
+.skin-cyberpunk .tl-seg.tl-online { box-shadow: 0 0 3px var(--green2); }
+.skin-cyberpunk .tl-seg.tl-offline { box-shadow: 0 0 3px var(--red); }
+
+/* ── LOG EXPORT BTN ── */
+#logExportBtn { margin-left: 0; }
+
+
+/* ═══════════════════════════════════════════════
+   TOOLTIPS
+═══════════════════════════════════════════════ */
+[data-tooltip] {
+  position: relative;
+  cursor: default;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1e28;
+  color: #e8ecf8;
+  border: 1px solid #444858;
+  border-radius: 4px;
+  padding: 0.45rem 0.75rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  letter-spacing: 0.03em;
+  white-space: pre-line;
+  width: max-content;
+  max-width: 260px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateX(-50%) translateY(4px);
+  z-index: 9000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+}
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+/* flip down when near top of screen */
+[data-tooltip].tt-down::after {
+  bottom: auto;
+  top: calc(100% + 10px);
+  transform: translateX(-50%) translateY(-4px);
+}
+[data-tooltip].tt-down:hover::after {
+  transform: translateX(-50%) translateY(0);
+}
+/* arrow up */
+[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #444858;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 9001;
+}
+[data-tooltip]:hover::before { opacity: 1; }
+[data-tooltip].tt-down::before {
+  bottom: auto;
+  top: calc(100% + 4px);
+  border-top-color: transparent;
+  border-bottom-color: #444858;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 800px) {
+  body { height: auto; overflow: auto; }
+  #app { height: auto; overflow: auto; }
+  #main { overflow: visible; }
+  #channels { grid-template-columns: 1fr; }
+  .channel { border-right: none; border-bottom: 2px solid var(--border); }
+  #topbar { height: auto; min-height: 4rem; flex-wrap: wrap; padding: 0.6rem 1rem; gap: 0.4rem; }
+  .tb-center { position: static; transform: none; order: 3; width: 100%; justify-content: center; }
+  .tb-left { flex: 1; }
+  .tb-tag { font-size: 0.65rem; }
+  .tb-clock { font-size: 1.4rem; }
+  .on-air-text { font-size: 1rem; }
+  .skin-switcher { display: none; }
+  #logSection { max-height: none; }
+  #logBody { max-height: 200px; overflow-y: auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ INTRO ═══ -->
+<div id="intro">
+  <div class="intro-title"><span>STR</span> Monitor · Sistema de monitoreo</div>
+
+  <div class="skin-grid" style="display:none">
+
+    <!-- Broadcast -->
+    <div class="skin-card" data-skin="broadcast">
+      <div class="skin-preview preview-broadcast">
+        <div class="p-header">
+          <div class="p-dot"></div>
+          <div class="p-bar"></div>
+          <div class="p-time">23:14:05</div>
+        </div>
+        <div class="p-body">
+          <div class="p-freq">1110 <span style="font-size:10px;color:#40c4ff">AM</span></div>
+          <div class="p-segs">
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg y"></div><div class="p-seg y"></div>
+            <div class="p-seg r"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+          </div>
+        </div>
+      </div>
+      <div class="skin-info">
+        <div class="skin-name">Broadcast</div>
+        <div class="skin-desc">Control room · Rack profesional</div>
+      </div>
+    </div>
+
+    <!-- Cyberpunk -->
+    <div class="skin-card" data-skin="cyberpunk">
+      <div class="skin-preview preview-cyberpunk">
+        <div class="p-header">
+          <div class="p-dot"></div>
+          <div class="p-bar"></div>
+          <div class="p-time">23:14:05</div>
+        </div>
+        <div class="p-body">
+          <div class="p-freq">92.7 <span style="font-size:9px;color:#bf00ff">FM</span></div>
+          <div class="p-segs">
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg y"></div><div class="p-seg y"></div>
+            <div class="p-seg r"></div><div class="p-seg r"></div><div class="p-seg off"></div>
+            <div class="p-seg off"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+          </div>
+        </div>
+      </div>
+      <div class="skin-info">
+        <div class="skin-name">Cyberpunk</div>
+        <div class="skin-desc">Neon · Grid · Synthwave</div>
+      </div>
+    </div>
+
+    <!-- Minimal -->
+    <div class="skin-card" data-skin="minimal">
+      <div class="skin-preview preview-minimal">
+        <div class="p-header">
+          <div class="p-dot"></div>
+          <div class="p-bar"></div>
+          <div class="p-time">23:14:05</div>
+        </div>
+        <div class="p-body">
+          <div class="p-freq">1110 <span style="font-size:9px;color:#60a5fa;font-family:'DM Mono',monospace">AM</span></div>
+          <div class="p-segs">
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg y"></div>
+            <div class="p-seg off"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+            <div class="p-seg off"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+          </div>
+        </div>
+      </div>
+      <div class="skin-info">
+        <div class="skin-name">Minimal</div>
+        <div class="skin-desc">Dark · Elegante · App moderna</div>
+      </div>
+    </div>
+
+    <!-- Retro -->
+    <div class="skin-card" data-skin="retro">
+      <div class="skin-preview preview-retro">
+        <div class="p-header">
+          <div class="p-dot"></div>
+          <div class="p-bar"></div>
+          <div class="p-time">23:14:05</div>
+        </div>
+        <div class="p-body">
+          <div class="p-freq">92.7 <span style="font-size:12px;color:#c8a030">FM</span></div>
+          <div class="p-segs">
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg y"></div>
+            <div class="p-seg y"></div><div class="p-seg r"></div><div class="p-seg off"></div>
+            <div class="p-seg off"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+            <div class="p-seg off"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+          </div>
+        </div>
+      </div>
+      <div class="skin-info">
+        <div class="skin-name">Retro 80s</div>
+        <div class="skin-desc">Terminal · Fósforo ámbar · Scanlines</div>
+      </div>
+    </div>
+
+  </div>
+
+  <button id="startBtn">Iniciar sistema</button>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+
+  <div id="topbar">
+    <div class="tb-left">
+      <span class="tb-logo"><span id="logoSpan">STR</span>·MON</span>
+      <div class="tb-sep"></div>
+      <span class="tb-tag" id="headerDate">--</span>
+    </div>
+    <div class="tb-center">
+      <div class="on-air-lamp" data-tooltip="Indicador Al Aire&#10;Parpadeo = sistema activo&#10;monitoreo en curso"></div>
+      <span class="on-air-text">On Air</span>
+    </div>
+    <div class="tb-right">
+      <span class="tb-clock" id="headerTime" data-tooltip="Hora actual del sistema">--:--:--</span>
+      <div class="tb-sep"></div>
+      <div class="skin-switcher" id="skinSwitcher" data-tooltip="Cambiar interfaz visual&#10;sin interrumpir el monitoreo">
+        <div class="sw-btn" data-skin="broadcast" title="Broadcast"><div class="sw-dot"></div></div>
+        <div class="sw-btn" data-skin="cyberpunk"  title="Cyberpunk"><div class="sw-dot"></div></div>
+        <div class="sw-btn" data-skin="minimal"    title="Minimal"><div class="sw-dot"></div></div>
+        <div class="sw-btn" data-skin="retro"      title="Retro 80s"><div class="sw-dot"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="channels">
+
+      <!-- CH 1 · AM 1110 -->
+      <div class="channel">
+        <div class="ch-header">
+          <div class="ch-id">
+            <span class="ch-num">CH·01</span>
+            <span class="ch-freq">1110</span>
+            <span class="ch-band">AM</span>
+          </div>
+          <div class="ch-status loading" id="status1" data-tooltip="Estado actual de la transmisión&#10;Online · Offline · Buffering · Dead Air">
+            <div class="led"></div>
+            <span class="ch-status-text" id="statusText1">Init</span>
+          </div>
+        </div>
+        <div class="ch-vu" data-tooltip="VU Meter — Nivel de señal de audio&#10;Verde: normal · Amarillo: alto · Rojo: sobrecarga&#10;L = canal izquierdo · R = canal derecho">
+          <div class="vu-row">
+            <span class="vu-ch">L</span>
+            <div class="vu-segs" id="segs1L"></div>
+            <span class="vu-db" id="db1L">–∞</span>
+          </div>
+          <div class="vu-row">
+            <span class="vu-ch">R</span>
+            <div class="vu-segs" id="segs1R"></div>
+            <span class="vu-db" id="db1R">–∞</span>
+          </div>
+          <div class="vu-scale">
+            <div class="vu-scale-inner">
+              <span>-40</span><span>-20</span><span>-12</span><span>-6</span><span>0</span><span>+3</span>
+            </div>
+          </div>
+        </div>
+        <div class="ch-meta">
+          <div class="meta-cell" data-tooltip="Bitrate del stream — velocidad de transmisión&#10;128 kbps: calidad estándar&#10;192 kbps: alta calidad&#10;320 kbps: máxima calidad">
+            <span class="meta-lbl">Bitrate</span>
+            <span class="meta-val" id="bitrate1">—</span>
+          </div>
+          <div class="meta-cell" data-tooltip="Calidad estimada del stream&#10;basada en el bitrate detectado&#10;Excelente · Buena · Regular · Baja">
+            <span class="meta-lbl">Calidad</span>
+            <span class="meta-val" id="quality1">—</span>
+          </div>
+          <div class="meta-cell" data-tooltip="Intensidad de señal del stream&#10;calculada en tiempo real desde&#10;el nivel promedio de audio recibido">
+            <span class="meta-lbl">Señal</span>
+            <div class="sig-bars" id="signal1">
+              <div class="sig-bar" style="height:20%"></div>
+              <div class="sig-bar" style="height:40%"></div>
+              <div class="sig-bar" style="height:60%"></div>
+              <div class="sig-bar" style="height:80%"></div>
+              <div class="sig-bar" style="height:100%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="ch-fader" data-tooltip="Control de volumen de monitoreo local&#10;No afecta la transmisión al aire&#10;Solo controla el nivel de escucha">
+          <div class="fader-header">
+            <span class="fader-lbl">Fader</span>
+            <div class="fader-right">
+              <span class="fader-val" id="volVal1">0%</span>
+              <button class="mute-btn" id="muteBtn1" data-tooltip="Silencia el audio de monitoreo&#10;La transmisión al aire continúa normalmente">Mute</button>
+            </div>
+          </div>
+          <input type="range" id="volumeSlider1" min="0" max="1" step="0.01" value="0">
+        </div>
+        <div class="ch-stats">
+          <div class="stat-cell" data-tooltip="Tiempo total de transmisión activa&#10;desde que se inició esta sesión&#10;Formato: horas:minutos:segundos">
+            <span class="stat-lbl">Uptime sesión</span>
+            <span class="stat-val" id="uptime1">--:--:--</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Porcentaje de tiempo en línea&#10;sobre el total de la sesión&#10;≥95%: verde · ≥80%: amarillo · <80%: rojo">
+            <span class="stat-lbl">Disponibilidad</span>
+            <span class="stat-val good" id="avail1">--%</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Cantidad de interrupciones detectadas&#10;en la transmisión durante esta sesión&#10;Incluye cortes, errores y dead air">
+            <span class="stat-lbl">Cortes</span>
+            <span class="stat-val" id="cuts1">0</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Tiempo transcurrido desde&#10;la última interrupción detectada&#10;— si no hubo cortes en la sesión">
+            <span class="stat-lbl">Último corte</span>
+            <span class="stat-val" id="lastcut1">--</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Estado del sistema de reconexión automática&#10;Cuando el stream cae, intenta reconectarse&#10;con intervalos crecientes hasta 30 segundos">
+            <span class="stat-lbl">Reconexión</span>
+            <span class="stat-val" id="recon1">--</span>
+          </div>
+        </div>
+        <div class="ch-timeline-wrap" data-tooltip="Historial visual de los últimos 60 minutos&#10;Verde: en línea · Rojo: caído&#10;Amarillo: buffering o dead air · Gris: sin dato">
+          <span class="tl-label">-60min</span>
+          <div class="ch-timeline" id="timeline1"></div>
+          <span class="tl-label">ahora</span>
+        </div>
+      </div>
+
+      <!-- CH 2 · FM 92.7 -->
+      <div class="channel">
+        <div class="ch-header">
+          <div class="ch-id">
+            <span class="ch-num">CH·02</span>
+            <span class="ch-freq">92.7</span>
+            <span class="ch-band">FM</span>
+          </div>
+          <div class="ch-status loading" id="status2" data-tooltip="Estado actual de la transmisión&#10;Online · Offline · Buffering · Dead Air">
+            <div class="led"></div>
+            <span class="ch-status-text" id="statusText2">Init</span>
+          </div>
+        </div>
+        <div class="ch-vu" data-tooltip="VU Meter — Nivel de señal de audio&#10;Verde: normal · Amarillo: alto · Rojo: sobrecarga&#10;L = canal izquierdo · R = canal derecho">
+          <div class="vu-row">
+            <span class="vu-ch">L</span>
+            <div class="vu-segs" id="segs2L"></div>
+            <span class="vu-db" id="db2L">–∞</span>
+          </div>
+          <div class="vu-row">
+            <span class="vu-ch">R</span>
+            <div class="vu-segs" id="segs2R"></div>
+            <span class="vu-db" id="db2R">–∞</span>
+          </div>
+          <div class="vu-scale">
+            <div class="vu-scale-inner">
+              <span>-40</span><span>-20</span><span>-12</span><span>-6</span><span>0</span><span>+3</span>
+            </div>
+          </div>
+        </div>
+        <div class="ch-meta">
+          <div class="meta-cell" data-tooltip="Bitrate del stream — velocidad de transmisión&#10;128 kbps: calidad estándar&#10;192 kbps: alta calidad&#10;320 kbps: máxima calidad">
+            <span class="meta-lbl">Bitrate</span>
+            <span class="meta-val" id="bitrate2">—</span>
+          </div>
+          <div class="meta-cell" data-tooltip="Calidad estimada del stream&#10;basada en el bitrate detectado&#10;Excelente · Buena · Regular · Baja">
+            <span class="meta-lbl">Calidad</span>
+            <span class="meta-val" id="quality2">—</span>
+          </div>
+          <div class="meta-cell" data-tooltip="Intensidad de señal del stream&#10;calculada en tiempo real desde&#10;el nivel promedio de audio recibido">
+            <span class="meta-lbl">Señal</span>
+            <div class="sig-bars" id="signal2">
+              <div class="sig-bar" style="height:20%"></div>
+              <div class="sig-bar" style="height:40%"></div>
+              <div class="sig-bar" style="height:60%"></div>
+              <div class="sig-bar" style="height:80%"></div>
+              <div class="sig-bar" style="height:100%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="ch-fader" data-tooltip="Control de volumen de monitoreo local&#10;No afecta la transmisión al aire&#10;Solo controla el nivel de escucha">
+          <div class="fader-header">
+            <span class="fader-lbl">Fader</span>
+            <div class="fader-right">
+              <span class="fader-val" id="volVal2">0%</span>
+              <button class="mute-btn" id="muteBtn2" data-tooltip="Silencia el audio de monitoreo&#10;La transmisión al aire continúa normalmente">Mute</button>
+            </div>
+          </div>
+          <input type="range" id="volumeSlider2" min="0" max="1" step="0.01" value="0">
+        </div>
+        <div class="ch-stats">
+          <div class="stat-cell" data-tooltip="Tiempo total de transmisión activa&#10;desde que se inició esta sesión&#10;Formato: horas:minutos:segundos">
+            <span class="stat-lbl">Uptime sesión</span>
+            <span class="stat-val" id="uptime2">--:--:--</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Porcentaje de tiempo en línea&#10;sobre el total de la sesión&#10;≥95%: verde · ≥80%: amarillo · <80%: rojo">
+            <span class="stat-lbl">Disponibilidad</span>
+            <span class="stat-val good" id="avail2">--%</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Cantidad de interrupciones detectadas&#10;en la transmisión durante esta sesión&#10;Incluye cortes, errores y dead air">
+            <span class="stat-lbl">Cortes</span>
+            <span class="stat-val" id="cuts2">0</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Tiempo transcurrido desde&#10;la última interrupción detectada&#10;— si no hubo cortes en la sesión">
+            <span class="stat-lbl">Último corte</span>
+            <span class="stat-val" id="lastcut2">--</span>
+          </div>
+          <div class="stat-cell" data-tooltip="Estado del sistema de reconexión automática&#10;Cuando el stream cae, intenta reconectarse&#10;con intervalos crecientes hasta 30 segundos">
+            <span class="stat-lbl">Reconexión</span>
+            <span class="stat-val" id="recon2">--</span>
+          </div>
+        </div>
+        <div class="ch-timeline-wrap" data-tooltip="Historial visual de los últimos 60 minutos&#10;Verde: en línea · Rojo: caído&#10;Amarillo: buffering o dead air · Gris: sin dato">
+          <span class="tl-label">-60min</span>
+          <div class="ch-timeline" id="timeline2"></div>
+          <span class="tl-label">ahora</span>
+        </div>
+      </div>
+
+    </div><!-- /channels -->
+
+    <!-- EVENT LOG -->
+    <div id="logSection">
+      <div id="logHeader">
+        <div id="logTitle" data-tooltip="Registro cronológico de todos los eventos&#10;detectados durante la sesión · Persiste&#10;entre recargas · Máximo 500 entradas">
+          <span class="log-icon">◈</span>
+          <span>Log de eventos</span>
+          <span id="logCount" class="log-count">0</span>
+        </div>
+        <div id="logActions">
+          <button class="log-btn" id="logExportBtn" data-tooltip="Exportar historial completo&#10;como archivo CSV descargable">↓ CSV</button>
+          <button class="log-btn" id="logClearBtn" data-tooltip="Borrar todo el historial&#10;de eventos almacenado">Limpiar</button>
+          <button class="log-btn" id="logToggleBtn" data-tooltip="Mostrar u ocultar&#10;el panel de log">▲ Ocultar</button>
+        </div>
+      </div>
+      <div id="logBody">
+        <div id="logEmpty">Sin eventos registrados</div>
+        <div id="logList"></div>
+      </div>
+    </div>
+
+
+  </div>
+</div><!-- /app -->
+
+<script>
+/* ═══════════════════════════════════════════
+   SKIN SYSTEM + AUTO-ROTATE PER HOUR
+═══════════════════════════════════════════ */
+const SKINS = ['broadcast','cyberpunk','minimal','retro'];
+const SKIN_NAMES = {
+  broadcast: 'Broadcast',
+  cyberpunk:  'Cyberpunk',
+  minimal:    'Minimal',
+  retro:      'Retro 80s'
+};
+let currentSkin = null;
+let autoRotate  = true;   // can be disabled by manual header click
+
+function applySkin(skin, animated = false, showToast = false) {
+  if (animated) {
+    const overlay = document.getElementById('skinTransition');
+    overlay.classList.add('flash');
+    setTimeout(() => {
+      doApplySkin(skin);
+      overlay.classList.remove('flash');
+    }, 600);
+  } else {
+    doApplySkin(skin);
+  }
+  if (showToast) showSkinToast(skin);
+}
+
+function doApplySkin(skin) {
+  SKINS.forEach(s => document.body.classList.remove('skin-' + s));
+  document.body.classList.add('skin-' + skin);
+  currentSkin = skin;
+  document.querySelectorAll('.sw-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.skin === skin);
+  });
+  localStorage.setItem('monitor-skin', skin);
+}
+
+let toastTimer = null;
+function showSkinToast(skin) {
+  const toast = document.getElementById('skinToast');
+  toast.innerHTML = 'Interfaz cambiada a <span class="toast-skin">' + SKIN_NAMES[skin] + '</span>';
+  toast.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Skin per hour: cada hora exacta rota cíclicamente entre las 4 skins
+// 00→broadcast 01→cyberpunk 02→minimal 03→retro 04→broadcast ...
+function skinForHour(h) {
+  return SKINS[h % SKINS.length];
+}
+
+let lastHourChecked = -1;
+function checkHourRotation() {
+  if (!autoRotate) return;
+  const h = new Date().getHours();
+  if (h !== lastHourChecked) {
+    lastHourChecked = h;
+    const newSkin = skinForHour(h);
+    if (newSkin !== currentSkin) {
+      applySkin(newSkin, true, true);
+    }
+  }
+}
+// Check every 10 seconds (catches the hour boundary quickly)
+setInterval(checkHourRotation, 10000);
+
+document.querySelectorAll('.skin-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    autoRotate = false;  // manual pick disables auto for this session
+    applySkin(card.dataset.skin);
+    document.getElementById('startBtn').classList.add('ready');
+  });
+});
+
+document.querySelectorAll('.sw-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    autoRotate = false;  // manual pick disables auto
+    applySkin(btn.dataset.skin, true, true);
+  });
+});
+
+// Init: apply skin for current hour
+const initSkin = skinForHour(new Date().getHours());
+applySkin(initSkin);
+lastHourChecked = new Date().getHours();
+document.getElementById('startBtn').classList.add('ready');
+
+/* ═══════════════════════════════════════════
+   INTRO
+═══════════════════════════════════════════ */
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (!currentSkin) return;
+  document.getElementById('intro').classList.add('fade-out');
+  setTimeout(() => document.getElementById('intro').style.display = 'none', 800);
+  document.getElementById('app').classList.add('visible');
+  initRadios();
+});
+
+/* ═══════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════ */
+function updateClock() {
+  const now = new Date();
+  const t = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const d = now.toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('headerTime').textContent = t;
+  document.getElementById('headerDate').textContent = d.toUpperCase();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ═══════════════════════════════════════════
+   VU METER SEGMENTS
+═══════════════════════════════════════════ */
+const NUM_SEGS  = 32;
+const GREEN_END = Math.floor(NUM_SEGS * 0.65);
+const YEL_END   = Math.floor(NUM_SEGS * 0.82);
+
+function buildSegs(id) {
+  const el = document.getElementById(id);
+  for (let i = 0; i < NUM_SEGS; i++) {
+    const s = document.createElement('div');
+    s.className = 'seg ' + (i < GREEN_END ? 'z-g' : i < YEL_END ? 'z-y' : 'z-r');
+    el.appendChild(s);
+  }
+}
+['segs1L','segs1R','segs2L','segs2R'].forEach(buildSegs);
+
+function setSegs(id, level) {
+  const segs = document.getElementById(id).children;
+  const lit  = Math.round(level * NUM_SEGS);
+  for (let i = 0; i < segs.length; i++) segs[i].classList.toggle('lit', i < lit);
+}
+
+function levelToDb(level) {
+  if (level < 0.001) return '–∞ dB';
+  return (20 * Math.log10(level)).toFixed(1) + ' dB';
+}
+
+function updateSignalBars(id, level) {
+  const bars = document.querySelectorAll('#' + id + ' .sig-bar');
+  const t = [0.05, 0.2, 0.4, 0.62, 0.82];
+  bars.forEach((b, i) => b.classList.toggle('on', level >= t[i]));
+}
+
+/* ═══════════════════════════════════════════
+   TIMELINE (60 min, 1 slot per minute)
+═══════════════════════════════════════════ */
+const TL_SLOTS = 60;
+
+function buildTimeline(id) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  for (let i = 0; i < TL_SLOTS; i++) {
+    const s = document.createElement('div');
+    s.className = 'tl-seg';
+    el.appendChild(s);
+  }
+}
+['timeline1','timeline2'].forEach(buildTimeline);
+
+function updateTimeline(id, history) {
+  // history is array of {state, ts} newest last
+  const el = document.getElementById(id);
+  const segs = el.children;
+  const now = Date.now();
+  const slotMs = 60000; // 1 min per slot
+
+  for (let i = 0; i < TL_SLOTS; i++) {
+    const slotStart = now - (TL_SLOTS - i) * slotMs;
+    const slotEnd   = slotStart + slotMs;
+    // find the state active during this slot (last event before slotEnd)
+    let state = 'loading';
+    for (let j = history.length - 1; j >= 0; j--) {
+      if (history[j].ts <= slotEnd) { state = history[j].state; break; }
+    }
+    segs[i].className = 'tl-seg tl-' + state;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   EVENT LOG SYSTEM
+═══════════════════════════════════════════ */
+const LOG_KEY = 'radio-monitor-log';
+let eventLog = [];
+let logVisible = true;
+
+try {
+  const saved = localStorage.getItem(LOG_KEY);
+  if (saved) eventLog = JSON.parse(saved);
+} catch(e) { eventLog = []; }
+
+function saveLog() {
+  try { localStorage.setItem(LOG_KEY, JSON.stringify(eventLog.slice(-500))); } catch(e) {}
+}
+
+const stateLabels = {
+  online: 'Online', offline: 'Offline', loading: 'Init',
+  buffering: 'Buffering', stalled: 'Sin datos',
+  error: 'Error', silence: 'Dead Air'
+};
+
+function diagnose(state, lastFetchOk) {
+  if (state === 'error' || state === 'offline') {
+    if (lastFetchOk === false) return { text: 'Servidor sin respuesta', cls: 'bad' };
+    if (lastFetchOk === true)  return { text: 'Corte en red / cliente', cls: 'warn' };
+    return { text: 'Stream caído', cls: 'bad' };
+  }
+  if (state === 'buffering') return { text: 'Problema de red o latencia alta', cls: 'warn' };
+  if (state === 'stalled')   return { text: 'Sin datos del servidor', cls: 'warn' };
+  if (state === 'silence')   return { text: 'Dead air · ¿falla automatización?', cls: 'warn' };
+  if (state === 'online')    return { text: 'Transmisión normal', cls: '' };
+  return { text: '', cls: '' };
+}
+
+function addLogEntry(chName, chClass, state, lastFetchOk) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const diag = diagnose(state, lastFetchOk);
+  const entry = { time: timeStr, ch: chName, chClass, state, diag: diag.text, diagCls: diag.cls, ts: now.getTime() };
+  const last = eventLog[eventLog.length - 1];
+  if (last && last.ch === chName && last.state === state) return;
+  eventLog.push(entry);
+  saveLog();
+  renderLog();
+}
+
+function renderLog() {
+  const list  = document.getElementById('logList');
+  const empty = document.getElementById('logEmpty');
+  const count = document.getElementById('logCount');
+  count.textContent = eventLog.length;
+  if (eventLog.length === 0) { empty.style.display = 'block'; list.innerHTML = ''; return; }
+  empty.style.display = 'none';
+  const entries = eventLog.slice(-80).reverse();
+  list.innerHTML = entries.map(e =>
+    '<div class="log-entry">' +
+      '<span class="log-time">' + e.time + '</span>' +
+      '<span class="log-ch ' + e.chClass + '">' + e.ch + '</span>' +
+      '<span class="log-state ' + e.state + '">' + (stateLabels[e.state] || e.state) + '</span>' +
+      '<span class="log-diag ' + e.diagCls + '">' + e.diag + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+document.getElementById('logClearBtn').addEventListener('click', () => {
+  eventLog = [];
+  saveLog();
+  renderLog();
+});
+
+document.getElementById('logToggleBtn').addEventListener('click', () => {
+  logVisible = !logVisible;
+  document.getElementById('logSection').classList.toggle('collapsed', !logVisible);
+  document.getElementById('logToggleBtn').textContent = logVisible ? '▲ Ocultar' : '▼ Mostrar';
+});
+
+document.getElementById('logExportBtn').addEventListener('click', () => {
+  if (!eventLog.length) return;
+  const header = 'Hora,Canal,Estado,Diagnóstico\n';
+  const rows = eventLog.map(e => [e.time, e.ch, stateLabels[e.state] || e.state, e.diag].map(v => '"' + v + '"').join(',')).join('\n');
+  const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'radio-monitor-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+renderLog();
+
+/* ═══════════════════════════════════════════
+   RADIO ENGINE
+═══════════════════════════════════════════ */
+function setupRadio(audioUrl, cfg) {
+  const audio = new Audio(audioUrl);
+  audio.crossOrigin = "anonymous";
+  audio.autoplay = true;
+  audio.preload  = "auto";
+  audio.muted    = true;
+
+  let audioCtx, analyserL, analyserR, source, gainNode, dataL, dataR;
+  let isMuted    = false;
+  let lastFetchOk = null;
+  let currentState = 'loading';
+
+  // Session stats
+  const sessionStart  = Date.now();
+  let uptimeMs        = 0;
+  let lastOnlineStart = null;
+  let cutCount        = 0;
+  let lastCutTime     = null;
+  let cutStartTime    = null;
+  let totalCutMs      = 0;
+  let reconnectAttempts = 0;
+
+  // Timeline history: [{state, ts}]
+  const tlHistory = [];
+  function pushTimeline(state) {
+    tlHistory.push({ state, ts: Date.now() });
+    if (tlHistory.length > 200) tlHistory.shift();
+    updateTimeline(cfg.timelineId, tlHistory);
+  }
+
+  // Stats ticker — runs every second
+  setInterval(() => {
+    const now = Date.now();
+    const sessionMs = now - sessionStart;
+
+    // Accumulate uptime
+    if (currentState === 'online' && lastOnlineStart !== null) {
+      uptimeMs = (now - lastOnlineStart);
+    }
+
+    // Uptime display
+    const totalUp = Math.max(0, uptimeMs);
+    const h = Math.floor(totalUp / 3600000);
+    const m = Math.floor((totalUp % 3600000) / 60000);
+    const s = Math.floor((totalUp % 60000) / 1000);
+    document.getElementById(cfg.uptimeId).textContent =
+      String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+
+    // Availability %
+    const avail = sessionMs > 0 ? Math.round((totalUp / sessionMs) * 100) : 100;
+    const availEl = document.getElementById(cfg.availId);
+    availEl.textContent = avail + '%';
+    availEl.className = 'stat-val ' + (avail >= 95 ? 'good' : avail >= 80 ? 'warn' : 'bad');
+
+    // Cut count
+    document.getElementById(cfg.cutsId).textContent = cutCount;
+
+    // Last cut
+    const lastCutEl = document.getElementById(cfg.lastCutId);
+    if (lastCutTime) {
+      const ago = Math.floor((now - lastCutTime) / 1000);
+      if (ago < 60) lastCutEl.textContent = 'hace ' + ago + 's';
+      else if (ago < 3600) lastCutEl.textContent = 'hace ' + Math.floor(ago/60) + 'min';
+      else lastCutEl.textContent = 'hace ' + Math.floor(ago/3600) + 'h';
+    } else {
+      lastCutEl.textContent = 'ninguno';
+    }
+
+    // Reconnect status
+    const reconEl = document.getElementById(cfg.reconId);
+    if (reconnectAttempts > 0 && currentState !== 'online') {
+      reconEl.textContent = 'Intento ' + reconnectAttempts;
+      reconEl.className = 'stat-val warn';
+    } else if (reconnectAttempts > 0 && currentState === 'online') {
+      reconEl.textContent = 'OK (' + reconnectAttempts + ')';
+      reconEl.className = 'stat-val good';
+    } else {
+      reconEl.textContent = '--';
+      reconEl.className = 'stat-val';
+    }
+
+    // Refresh timeline every tick
+    updateTimeline(cfg.timelineId, tlHistory);
+  }, 1000);
+
+  function setState(state) {
+    if (state === currentState) return;
+    const prev = currentState;
+    currentState = state;
+
+    // Track uptime/cuts
+    if (state === 'online') {
+      lastOnlineStart = Date.now();
+      if (cutStartTime !== null) {
+        totalCutMs += Date.now() - cutStartTime;
+        cutStartTime = null;
+      }
+    }
+    if ((prev === 'online') && ['offline','error','stalled','silence'].includes(state)) {
+      cutCount++;
+      lastCutTime  = Date.now();
+      cutStartTime = Date.now();
+      lastOnlineStart = null;
+    }
+
+    cfg.statusEl.className = 'ch-status ' + state;
+    cfg.statusTextEl.textContent = stateLabels[state] || state;
+    addLogEntry(cfg.chName, cfg.chClass, state, lastFetchOk);
+    pushTimeline(state);
+
+    const isAlert = ['offline','error','stalled','silence'].includes(state);
+    cfg.channelEl.classList.toggle('alert-flash', isAlert);
+
+    // Auto-reconnect on hard failures
+    if (['offline','error'].includes(state)) {
+      scheduleReconnect();
+    }
+  }
+
+  // Auto-reconnect with backoff
+  let reconnectTimer = null;
+  function scheduleReconnect() {
+    if (reconnectTimer) return;
+    const delay = Math.min(5000 + reconnectAttempts * 3000, 30000);
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      if (['offline','error'].includes(currentState)) {
+        reconnectAttempts++;
+        audio.load();
+        audio.play().catch(() => {});
+      }
+    }, delay);
+  }
+
+  // HTML5 audio events
+  audio.addEventListener('playing',  () => setState('online'));
+  audio.addEventListener('waiting',  () => setState('buffering'));
+  audio.addEventListener('stalled',  () => setState('stalled'));
+  audio.addEventListener('ended',    () => setState('offline'));
+  audio.addEventListener('error',    () => setState('error'));
+  audio.addEventListener('pause',    () => { if (!isMuted) setState('offline'); });
+
+  // HTTP stream check every 15s
+  async function checkStream() {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 5000);
+      await fetch(audioUrl, { method: 'HEAD', cache: 'no-store', signal: ctrl.signal, mode: 'no-cors' });
+      clearTimeout(tid);
+      lastFetchOk = true;
+    } catch(e) {
+      lastFetchOk = (e.name === 'AbortError') ? null : false;
+    }
+  }
+  checkStream();
+  setInterval(checkStream, 15000);
+
+  function initAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyserL = audioCtx.createAnalyser();
+    analyserR = audioCtx.createAnalyser();
+    analyserL.fftSize = 1024; analyserL.smoothingTimeConstant = 0.78;
+    analyserR.fftSize = 1024; analyserR.smoothingTimeConstant = 0.78;
+    dataL = new Uint8Array(analyserL.frequencyBinCount);
+    dataR = new Uint8Array(analyserR.frequencyBinCount);
+
+    source   = audioCtx.createMediaElementSource(audio);
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = parseFloat(cfg.slider.value);
+
+    const splitter = audioCtx.createChannelSplitter(2);
+    const mrgL = audioCtx.createChannelMerger(1);
+    const mrgR = audioCtx.createChannelMerger(1);
+    source.connect(splitter);
+    splitter.connect(mrgL, 0, 0);
+    splitter.connect(mrgR, 1, 0);
+    mrgL.connect(analyserL);
+    mrgR.connect(analyserR);
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    audio.play().then(() => {
+      setState('online');
+      detectBitrate();
+    }).catch(() => setState('error'));
+
+    drawVU();
+  }
+
+  function detectBitrate() {
+    const map = { ':1110': 128, ':9270': 192 };
+    let br = 128;
+    for (const [k, v] of Object.entries(map)) { if (audioUrl.includes(k)) { br = v; break; } }
+    setTimeout(() => {
+      cfg.bitrateEl.textContent = br + ' kbps';
+      if      (br >= 192) { cfg.qualityEl.textContent = 'Excelente'; cfg.qualityEl.className = 'meta-val good'; }
+      else if (br >= 128) { cfg.qualityEl.textContent = 'Buena';     cfg.qualityEl.className = 'meta-val good'; }
+      else if (br >= 64)  { cfg.qualityEl.textContent = 'Regular';   cfg.qualityEl.className = 'meta-val warn'; }
+      else                { cfg.qualityEl.textContent = 'Baja';      cfg.qualityEl.className = 'meta-val bad';  }
+    }, 900);
+  }
+
+  let silenceFrames = 0;
+  function detectSilence(level) {
+    if (level < 0.02) { silenceFrames++; } else { silenceFrames = 0; }
+    if (silenceFrames > 120 && currentState === 'online') setState('silence');
+    else if (silenceFrames === 0 && currentState === 'silence') setState('online');
+  }
+
+  function drawVU() {
+    analyserL.getByteFrequencyData(dataL);
+    analyserR.getByteFrequencyData(dataR);
+    let sumL = 0, sumR = 0;
+    for (let i = 0; i < dataL.length; i++) sumL += dataL[i];
+    for (let i = 0; i < dataR.length; i++) sumR += dataR[i];
+    const bL = Math.min((sumL / dataL.length / 255) * 2.6, 1);
+    const bR = Math.min((sumR / dataR.length / 255) * 2.6, 1);
+    setSegs(cfg.segsL, bL);
+    setSegs(cfg.segsR, bR);
+    cfg.dbL.textContent = levelToDb(bL);
+    cfg.dbR.textContent = levelToDb(bR);
+    updateSignalBars(cfg.signalId, (bL + bR) / 2);
+    detectSilence((bL + bR) / 2);
+    requestAnimationFrame(drawVU);
+  }
+
+  cfg.slider.addEventListener('input', () => {
+    const v = parseFloat(cfg.slider.value);
+    cfg.volValEl.textContent = Math.round(v * 100) + '%';
+    if (gainNode && !isMuted) gainNode.gain.value = v;
+  });
+
+  cfg.muteBtn.addEventListener('click', () => {
+    isMuted = !isMuted;
+    cfg.muteBtn.classList.toggle('muted', isMuted);
+    cfg.muteBtn.textContent = isMuted ? 'Unmute' : 'Mute';
+    if (gainNode) gainNode.gain.value = isMuted ? 0 : parseFloat(cfg.slider.value);
+  });
+
+  window.addEventListener('click', () => {
+    if (!audioCtx) initAudio();
+    if (audioCtx?.state === 'suspended') audioCtx.resume();
+    if (audio.muted) audio.muted = false;
+  }, { once: true });
+}
+
+function initRadios() {
+  setupRadio("https://media.radios.ar:1110/", {
+    chName: 'AM 1110', chClass: 'ch1',
+    channelEl:   document.querySelector('#channels .channel:nth-child(1)'),
+    statusEl:    document.getElementById('status1'),
+    statusTextEl:document.getElementById('statusText1'),
+    segsL: 'segs1L', segsR: 'segs1R',
+    dbL:   document.getElementById('db1L'),
+    dbR:   document.getElementById('db1R'),
+    bitrateEl:   document.getElementById('bitrate1'),
+    qualityEl:   document.getElementById('quality1'),
+    signalId:    'signal1',
+    timelineId:  'timeline1',
+    uptimeId:    'uptime1',
+    availId:     'avail1',
+    cutsId:      'cuts1',
+    lastCutId:   'lastcut1',
+    reconId:     'recon1',
+    slider:      document.getElementById('volumeSlider1'),
+    volValEl:    document.getElementById('volVal1'),
+    muteBtn:     document.getElementById('muteBtn1'),
+  });
+  setupRadio("https://media.radios.ar:9270/", {
+    chName: 'FM 92.7', chClass: 'ch2',
+    channelEl:   document.querySelector('#channels .channel:nth-child(2)'),
+    statusEl:    document.getElementById('status2'),
+    statusTextEl:document.getElementById('statusText2'),
+    segsL: 'segs2L', segsR: 'segs2R',
+    dbL:   document.getElementById('db2L'),
+    dbR:   document.getElementById('db2R'),
+    bitrateEl:   document.getElementById('bitrate2'),
+    qualityEl:   document.getElementById('quality2'),
+    signalId:    'signal2',
+    timelineId:  'timeline2',
+    uptimeId:    'uptime2',
+    availId:     'avail2',
+    cutsId:      'cuts2',
+    lastCutId:   'lastcut2',
+    reconId:     'recon2',
+    slider:      document.getElementById('volumeSlider2'),
+    volValEl:    document.getElementById('volVal2'),
+    muteBtn:     document.getElementById('muteBtn2'),
+  });
+}
+
+</script>
+<div id="skinTransition"></div>
+<div id="skinToast"></div>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then(r => console.log("SW:", r.scope))
+      .catch(e => console.log("SW error:", e));
+  });
+}
+</script>
+</body>
+</html>
