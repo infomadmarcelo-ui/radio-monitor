@@ -3,15 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#080a0c">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="STR Monitor">
-  <link rel="apple-touch-icon" href="icons/icon-180.png">
-  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
 <title>Radio Monitor</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@200;300;400;500&family=DM+Mono:wght@300;400;500&family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -830,7 +821,7 @@ input[type=range]::-moz-range-thumb {
   text-align: center;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease 3s, transform 0.2s ease 3s;
+  transition: opacity 0.2s ease 1s, transform 0.2s ease 1s;
   transform: translateX(-50%) translateY(4px);
   z-index: 9000;
   box-shadow: 0 4px 20px rgba(0,0,0,0.7);
@@ -838,7 +829,7 @@ input[type=range]::-moz-range-thumb {
 [data-tooltip]:hover::after {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
-  transition: opacity 0.2s ease 3s, transform 0.2s ease 3s;
+  transition: opacity 0.2s ease 1s, transform 0.2s ease 1s;
 }
 /* flip down when near top of screen */
 [data-tooltip].tt-down::after {
@@ -860,7 +851,7 @@ input[type=range]::-moz-range-thumb {
   border-top-color: #444858;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease 3s;
+  transition: opacity 0.2s ease 1s;
   z-index: 9001;
 }
 [data-tooltip]:hover::before { opacity: 1; }
@@ -1836,14 +1827,5 @@ function initRadios() {
 </script>
 <div id="skinTransition"></div>
 <div id="skinToast"></div>
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js")
-      .then(r => console.log("SW:", r.scope))
-      .catch(e => console.log("SW error:", e));
-  });
-}
-</script>
 </body>
 </html>
