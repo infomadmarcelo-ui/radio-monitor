@@ -21,6 +21,7 @@
 ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: clamp(14px, 1.4vw, 22px); overflow-x: hidden; }
+@media (max-width: 600px) { html { font-size: 12px; } }
 body { overflow-x: hidden; max-width: 100vw; }
 
 /* Skin transition overlay */
@@ -877,44 +878,82 @@ input[type=range]::-moz-range-thumb {
 
 /* ── PORTRAIT MOBILE ── */
 @media (max-width: 800px) and (orientation: portrait) {
-  #channels { grid-template-columns: 1fr; }
-  .channel { border-right: none; border-bottom: 2px solid var(--border); }
+  html { font-size: 11px; }
+  body { overflow-x: hidden; width: 100vw; max-width: 100vw; }
+  #app { width: 100vw; max-width: 100vw; overflow-x: hidden; }
+  #main { width: 100vw; max-width: 100vw; overflow-x: hidden; }
+  #channels { grid-template-columns: 1fr; width: 100%; }
+  .channel { border-right: none; border-bottom: 2px solid var(--border); width: 100%; overflow: hidden; }
+
   #topbar {
-    height: auto; min-height: 3.5rem;
-    flex-wrap: wrap; padding: 0.5rem 1rem; gap: 0.3rem;
+    height: auto; min-height: 3rem;
+    flex-wrap: wrap; padding: 0.4rem 0.75rem; gap: 0.3rem;
+    width: 100%; overflow: hidden;
   }
-  .tb-center { position: static; transform: none; order: 3; width: 100%; justify-content: center; padding: 0.2rem 0; }
-  .tb-left { flex: 1; }
-  .tb-clock { font-size: 1.2rem; }
-  .on-air-text { font-size: 0.9rem; }
+  .tb-center { position: static; transform: none; order: 3; width: 100%; justify-content: center; padding: 0.15rem 0; }
+  .tb-left { flex: 1; min-width: 0; overflow: hidden; }
+  .tb-logo { font-size: 1rem; }
+  .tb-clock { font-size: 1.1rem; }
+  .tb-tag { font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+  .on-air-text { font-size: 0.85rem; letter-spacing: 0.2em; }
+  .on-air-lamp { width: 0.7rem; height: 0.7rem; }
   .skin-switcher { display: none; }
-  .tb-sep:first-of-type { display: none; }
+  .tb-sep { display: none; }
+
+  .ch-header { padding: 0.5rem 0.75rem; }
+  .ch-freq { font-size: 2.2rem; }
+  .ch-vu { padding: 0.6rem 0.75rem 0.4rem; }
+  .ch-meta { flex-wrap: wrap; }
+  .meta-cell { min-width: 30%; flex: 1 1 30%; padding: 0.4rem 0.5rem; }
+  .ch-stats { flex-wrap: wrap; }
+  .stat-cell { min-width: 45%; flex: 1 1 45%; padding: 0.35rem 0.5rem; }
+  .ch-fader { padding: 0.5rem 0.75rem 0.6rem; }
+  .ch-timeline-wrap { padding: 0.3rem 0.75rem; }
+  #logSection { max-height: none; }
+  #logBody { max-height: 180px; overflow-y: auto; }
+  .log-entry { padding: 0.2rem 0.75rem; }
 }
 
 @media (max-width: 800px) and (orientation: landscape) {
-  #channels { grid-template-columns: 1fr 1fr; }
+  #channels { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
   .channel { border-right: 2px solid var(--border); }
   .channel:last-child { border-right: none; }
   #topbar { height: 3rem; padding: 0 1rem; }
   .tb-clock { font-size: 1.1rem; }
+  .tb-center { position: absolute; left: 50%; transform: translateX(-50%); }
 }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 800px) {
-  body { height: auto; overflow: auto; }
-  #app { height: auto; overflow: auto; }
-  #main { overflow: visible; }
-  #channels { grid-template-columns: 1fr; }
-  .channel { border-right: none; border-bottom: 2px solid var(--border); }
-  #topbar { height: auto; min-height: 4rem; flex-wrap: wrap; padding: 0.6rem 1rem; gap: 0.4rem; }
+  html, body { overflow-x: hidden !important; max-width: 100vw !important; }
+  * { max-width: 100%; }
+  body { height: auto; overflow-y: auto; overflow-x: hidden; }
+  #app { height: auto; overflow-x: hidden; }
+  #main { overflow-x: hidden; }
+  #channels { grid-template-columns: 1fr; overflow-x: hidden; }
+  .channel { border-right: none; border-bottom: 2px solid var(--border); overflow-x: hidden; width: 100%; }
+  .ch-header { padding: 0.6rem 0.8rem; overflow: hidden; }
+  .ch-id { overflow: hidden; max-width: 100%; }
+  .ch-freq { font-size: 2.4rem; }
+  .ch-meta { overflow: hidden; }
+  .ch-stats { overflow: hidden; flex-wrap: wrap; }
+  .stat-cell { min-width: 0; }
+  .meta-cell { min-width: 0; }
+  #topbar { height: auto; min-height: 4rem; flex-wrap: wrap; padding: 0.6rem 1rem; gap: 0.4rem; overflow: hidden; }
   .tb-center { position: static; transform: none; order: 3; width: 100%; justify-content: center; }
-  .tb-left { flex: 1; }
-  .tb-tag { font-size: 0.65rem; }
+  .tb-left { flex: 1; min-width: 0; overflow: hidden; }
+  .tb-logo { font-size: 1rem; }
+  .tb-tag { font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
   .tb-clock { font-size: 1.4rem; }
   .on-air-text { font-size: 1rem; }
   .skin-switcher { display: none; }
-  #logSection { max-height: none; }
-  #logBody { max-height: 200px; overflow-y: auto; }
+  #logSection { max-height: none; overflow-x: hidden; }
+  #logBody { max-height: 200px; overflow-y: auto; overflow-x: hidden; }
+  .log-entry { flex-wrap: wrap; gap: 0.2rem; }
+  .log-diag { width: 100%; }
+  .ch-timeline-wrap { overflow: hidden; }
+  input[type=range] { width: 100%; max-width: 100%; }
+  .ch-fader { overflow: hidden; padding: 0.7rem 0.8rem 0.9rem; }
 }
 </style>
 </head>
