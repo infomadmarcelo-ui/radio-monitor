@@ -20,7 +20,8 @@
    BASE RESET & LAYOUT
 ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: clamp(14px, 1.4vw, 22px); }
+html { font-size: clamp(14px, 1.4vw, 22px); overflow-x: hidden; }
+body { overflow-x: hidden; max-width: 100vw; }
 
 /* Skin transition overlay */
 #skinTransition {
@@ -57,7 +58,7 @@ body {
 #app { flex: 1; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.6s ease 0.3s; height: 100vh; }
 #app.visible { opacity: 1; }
 #main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-#channels { display: grid; grid-template-columns: 1fr 1fr; flex-shrink: 0; }
+#channels { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); flex-shrink: 0; overflow: hidden; }
 
 /* ═══════════════════════════════════════════════
    SKIN: BROADCAST
@@ -393,6 +394,7 @@ body.skin-cyberpunk::before {
   background: var(--panel);
   border-right: 2px solid var(--border);
   display: flex; flex-direction: column;
+  min-width: 0; overflow: hidden;
 }
 .channel:last-child { border-right: none; }
 
@@ -539,7 +541,7 @@ body.skin-cyberpunk::before {
 .skin-cyberpunk .sig-bar.on { box-shadow: 0 0 4px var(--green2); }
 
 /* ── FADER ── */
-.ch-fader { padding: 0.7rem 1.5rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.ch-fader { padding: 0.7rem 1.5rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden; }
 .fader-header { display: flex; justify-content: space-between; align-items: center; }
 .fader-lbl {
   font-size: 0.75rem; font-weight: 700;
@@ -575,6 +577,7 @@ input[type=range] {
   width: 100%; height: 4px;
   background: var(--inset); border-radius: 2px;
   outline: none; cursor: pointer; border: 1px solid var(--border);
+  touch-action: pan-x; min-width: 0;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
