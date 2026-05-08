@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
 <title>Radio Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@200;300;400;500&family=DM+Mono:wght@300;400;500&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@200;300;400;500&family=DM+Mono:wght@300;400;500&family=VT323&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════
    BASE RESET & LAYOUT
@@ -118,6 +118,180 @@ body.skin-retro {
   --radius: 0px; --ch-freq-size: 3.2rem;
 }
 
+/* ═══════════════════════════════════════════════
+   SKIN: NASA
+═══════════════════════════════════════════════ */
+body.skin-nasa {
+  font-family: 'Orbitron', sans-serif;
+  background: #020810; color: #7ab8d4;
+  --bg: #020810; --panel: #030d1a; --panel2: #041020;
+  --inset: #010608; --border: #0a2540; --border2: #0d3560;
+  --text: #7ab8d4; --text-dim: #2a5878; --text-bright: #c8e8f8;
+  --green: #00ff9f; --green2: #00dd88; --yellow: #ffd020;
+  --red: #ff3820; --blue: #4488ff; --amber: #ff8c20;
+  --seg-off: #021a10; --seg-off-y: #1a1000; --seg-off-r: #1a0800;
+  --radius: 2px; --ch-freq-size: 3rem;
+}
+
+/* NASA star field background */
+body.skin-nasa::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 8%,  rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 30%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 45%, rgba(255,255,255,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 33% 85%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5%  90%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 10%, rgba(255,255,255,0.4) 0%, transparent 100%);
+}
+/* subtle earth-glow at bottom */
+body.skin-nasa::after {
+  content: '';
+  position: fixed; bottom: -40%; left: 50%; transform: translateX(-50%);
+  width: 120vw; height: 60vh;
+  pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse at center bottom,
+    rgba(20,80,160,0.12) 0%,
+    rgba(10,40,100,0.06) 40%,
+    transparent 70%);
+}
+body.skin-nasa #app { position: relative; z-index: 1; }
+
+/* NASA topbar */
+.skin-nasa #topbar {
+  background: linear-gradient(180deg, #041020 0%, #030d1a 100%);
+  border-bottom: 1px solid #0d3560;
+  box-shadow: 0 1px 20px rgba(68,136,255,0.1);
+}
+.skin-nasa .tb-logo {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem; letter-spacing: 0.2em;
+  color: var(--text-bright);
+  text-shadow: 0 0 20px rgba(68,136,255,0.6);
+}
+.skin-nasa .tb-logo span { color: var(--blue); text-shadow: 0 0 15px var(--blue); }
+.skin-nasa .tb-clock {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.8rem; letter-spacing: 0.08em;
+  color: var(--text-bright);
+  text-shadow: 0 0 15px rgba(68,136,255,0.5);
+}
+.skin-nasa .on-air-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem; letter-spacing: 0.3em;
+  text-shadow: 0 0 12px var(--red);
+}
+.skin-nasa .on-air-lamp {
+  box-shadow: 0 0 1.5rem var(--red), 0 0 3rem rgba(255,56,32,0.5);
+}
+.skin-nasa .tb-tag {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem; color: var(--text-dim);
+}
+
+/* NASA channel headers */
+.skin-nasa .ch-header {
+  background: linear-gradient(180deg, #041020 0%, #030d1a 100%);
+  border-bottom: 1px solid var(--border2);
+}
+.skin-nasa .ch-num {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem; color: var(--blue);
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 8px var(--blue);
+}
+.skin-nasa .ch-freq {
+  font-family: 'Orbitron', sans-serif;
+  font-size: var(--ch-freq-size);
+  color: var(--text-bright);
+  text-shadow: 0 0 20px rgba(68,136,255,0.4);
+}
+.skin-nasa .ch-band {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem; color: var(--blue);
+  text-shadow: 0 0 8px var(--blue);
+}
+
+/* NASA status */
+.skin-nasa .ch-status {
+  border: 1px solid var(--border2);
+  background: rgba(4,16,32,0.8);
+}
+.skin-nasa .ch-status-text { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; }
+.skin-nasa .ch-status.online .ch-status-text { text-shadow: 0 0 8px var(--green2); }
+.skin-nasa .ch-status.offline .ch-status-text { text-shadow: 0 0 8px var(--red); }
+
+/* NASA VU — blue glow */
+.skin-nasa .seg.z-g.lit { background: var(--green2); box-shadow: 0 0 6px var(--green), 0 0 12px rgba(0,255,159,0.3); }
+.skin-nasa .seg.z-y.lit { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+.skin-nasa .seg.z-r.lit { background: var(--red);    box-shadow: 0 0 6px var(--red), 0 0 12px rgba(255,56,32,0.4); }
+.skin-nasa .vu-ch { font-family: 'Orbitron', sans-serif; font-size: 0.55rem; color: var(--blue); }
+.skin-nasa .vu-db { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; }
+.skin-nasa .vu-scale span { font-family: 'Orbitron', sans-serif; font-size: 0.42rem; }
+
+/* NASA meta labels */
+.skin-nasa .meta-lbl { font-family: 'Orbitron', sans-serif; font-size: 0.45rem; color: var(--blue); letter-spacing: 0.2em; }
+.skin-nasa .meta-val  { font-family: 'Orbitron', sans-serif; font-size: 0.8rem; }
+.skin-nasa .meta-val.good { text-shadow: 0 0 8px var(--green2); }
+.skin-nasa .meta-val.bad  { text-shadow: 0 0 8px var(--red); }
+.skin-nasa .sig-bar.on { background: var(--green2); box-shadow: 0 0 4px var(--green2); }
+
+/* NASA fader */
+.skin-nasa .fader-lbl { font-family: 'Orbitron', sans-serif; font-size: 0.45rem; color: var(--blue); }
+.skin-nasa .fader-val { font-family: 'Orbitron', sans-serif; font-size: 0.7rem; }
+.skin-nasa .mute-btn  { font-family: 'Orbitron', sans-serif; font-size: 0.5rem; }
+.skin-nasa input[type=range] { background: rgba(10,37,64,0.8); border-color: var(--border2); }
+.skin-nasa input[type=range]::-webkit-slider-thumb { background: var(--blue); border-color: var(--blue); box-shadow: 0 0 8px var(--blue); }
+
+/* NASA stats */
+.skin-nasa .stat-lbl { font-family: 'Orbitron', sans-serif; font-size: 0.42rem; color: var(--blue); }
+.skin-nasa .stat-val { font-family: 'Orbitron', sans-serif; font-size: 0.75rem; }
+.skin-nasa .stat-val.good { text-shadow: 0 0 6px var(--green2); }
+.skin-nasa .stat-val.bad  { text-shadow: 0 0 6px var(--red); }
+
+/* NASA timeline */
+.skin-nasa .tl-label { font-family: 'Orbitron', sans-serif; font-size: 0.42rem; }
+.skin-nasa .tl-seg.tl-online  { background: var(--green2); box-shadow: 0 0 4px var(--green2); }
+.skin-nasa .tl-seg.tl-offline { background: var(--red); box-shadow: 0 0 4px var(--red); }
+
+/* NASA log */
+.skin-nasa #logTitle { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; color: var(--blue); }
+.skin-nasa .log-btn  { font-family: 'Orbitron', sans-serif; font-size: 0.5rem; }
+.skin-nasa .log-time { font-family: 'Orbitron', monospace; font-size: 0.62rem; }
+.skin-nasa .log-ch   { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; }
+.skin-nasa .log-state{ font-family: 'Orbitron', sans-serif; font-size: 0.6rem; }
+.skin-nasa .log-diag { font-family: 'Orbitron', sans-serif; font-size: 0.58rem; }
+.skin-nasa .log-count{ font-family: 'Orbitron', sans-serif; }
+
+/* NASA alert flash */
+.skin-nasa .channel.alert-flash {
+  animation: alertFlashNasa 0.6s ease infinite alternate;
+}
+@keyframes alertFlashNasa {
+  from { background: var(--panel); }
+  to   { background: rgba(255,56,32,0.08); box-shadow: inset 0 0 30px rgba(255,56,32,0.06); }
+}
+
+/* NASA channel borders — subtle blue glow */
+.skin-nasa .channel { border-right-color: #0d3560; }
+.skin-nasa .ch-vu   { border-bottom-color: #0a2540; }
+.skin-nasa .ch-meta { border-bottom-color: #0a2540; }
+.skin-nasa .ch-stats { border-top-color: #0a2540; border-bottom-color: #0a2540; }
+.skin-nasa .meta-cell { border-right-color: #0a2540; }
+.skin-nasa .stat-cell { border-right-color: #0a2540; }
+.skin-nasa #logHeader { background: #030d1a; border-bottom-color: #0a2540; }
+.skin-nasa #logSection { border-top-color: #0a2540; border-bottom-color: #0a2540; }
+.skin-nasa .log-entry { border-bottom-color: #0a2540; }
+
 /* scanlines retro */
 body.skin-retro::after {
   content: '';
@@ -155,8 +329,8 @@ body.skin-cyberpunk::before {
 
 .skin-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem; width: min(600px, 90vw);
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem; width: min(700px, 90vw);
 }
 
 .skin-card {
@@ -245,6 +419,41 @@ body.skin-cyberpunk::before {
 .preview-minimal .p-seg.y { background: #fbbf24; }
 .preview-minimal .p-seg.r { background: #f87171; }
 .preview-minimal .p-seg.off { background: #1c1c1f; }
+
+
+/* Preview: NASA */
+.preview-nasa {
+  background: #020810;
+  border-bottom: 1px solid #0a2540;
+  position: relative;
+}
+.preview-nasa::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 20% 20%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 15%, rgba(255,255,255,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.4) 0%, transparent 100%);
+}
+.preview-nasa .p-header {
+  height: 22px; background: #041020;
+  border-bottom: 1px solid #0d3560;
+  display: flex; align-items: center; padding: 0 8px; gap: 6px;
+  position: relative;
+}
+.preview-nasa .p-dot { width: 6px; height: 6px; border-radius: 50%; background: #ff3820; box-shadow: 0 0 6px #ff3820; }
+.preview-nasa .p-bar { flex: 1; height: 1px; background: #0d3560; }
+.preview-nasa .p-time { font-family: 'Orbitron', sans-serif; font-size: 7px; color: #c8e8f8; }
+.preview-nasa .p-body { flex: 1; padding: 5px 8px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+.preview-nasa .p-freq { font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 700; color: #c8e8f8; line-height: 1; text-shadow: 0 0 10px rgba(68,136,255,0.5); }
+.preview-nasa .p-segs { height: 6px; background: #010608; display: flex; gap: 1px; padding: 1px; border: 1px solid #0a2540; }
+.preview-nasa .p-seg { flex: 1; }
+.preview-nasa .p-seg.g { background: #00dd88; box-shadow: 0 0 3px #00ff9f; }
+.preview-nasa .p-seg.y { background: #ffd020; }
+.preview-nasa .p-seg.r { background: #ff3820; box-shadow: 0 0 3px #ff3820; }
+.preview-nasa .p-seg.off { background: #021a10; }
 
 /* Preview: Retro */
 .preview-retro {
@@ -380,6 +589,7 @@ body.skin-cyberpunk::before {
 .sw-btn[data-skin="cyberpunk"] { background: #080c12; }
 .sw-btn[data-skin="minimal"]   { background: #141416; }
 .sw-btn[data-skin="retro"]     { background: #0f0c00; }
+.sw-btn[data-skin="nasa"]      { background: #020810; }
 .sw-dot {
   width: 8px; height: 8px; border-radius: 1px;
 }
@@ -1069,6 +1279,33 @@ input[type=range]::-moz-range-thumb {
       </div>
     </div>
 
+
+    <!-- NASA -->
+    <div class="skin-card" data-skin="nasa">
+      <div class="skin-preview preview-nasa">
+        <div class="p-header">
+          <div class="p-dot"></div>
+          <div class="p-bar"></div>
+          <div class="p-time">23:14:05</div>
+        </div>
+        <div class="p-body">
+          <div class="p-freq">1110 <span style="font-size:9px;color:#4488ff;font-family:'Orbitron',sans-serif">AM</span></div>
+          <div class="p-segs">
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg g"></div><div class="p-seg g"></div>
+            <div class="p-seg g"></div><div class="p-seg y"></div><div class="p-seg y"></div>
+            <div class="p-seg r"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+            <div class="p-seg off"></div><div class="p-seg off"></div><div class="p-seg off"></div>
+          </div>
+        </div>
+      </div>
+      <div class="skin-info">
+        <div class="skin-name">NASA</div>
+        <div class="skin-desc">Mission Control · Deep Space</div>
+      </div>
+    </div>
+
   </div>
 
   <button id="startBtn">Iniciar sistema</button>
@@ -1095,6 +1332,7 @@ input[type=range]::-moz-range-thumb {
         <div class="sw-btn" data-skin="cyberpunk"  title="Cyberpunk"><div class="sw-dot"></div></div>
         <div class="sw-btn" data-skin="minimal"    title="Minimal"><div class="sw-dot"></div></div>
         <div class="sw-btn" data-skin="retro"      title="Retro 80s"><div class="sw-dot"></div></div>
+        <div class="sw-btn" data-skin="nasa"       title="NASA"><div class="sw-dot"></div></div>
       </div>
     </div>
   </div>
@@ -1310,12 +1548,13 @@ input[type=range]::-moz-range-thumb {
 /* ═══════════════════════════════════════════
    SKIN SYSTEM + AUTO-ROTATE PER HOUR
 ═══════════════════════════════════════════ */
-const SKINS = ['broadcast','cyberpunk','minimal','retro'];
+const SKINS = ['broadcast','cyberpunk','minimal','retro','nasa'];
 const SKIN_NAMES = {
   broadcast: 'Broadcast',
   cyberpunk:  'Cyberpunk',
   minimal:    'Minimal',
-  retro:      'Retro 80s'
+  retro:      'Retro 80s',
+  nasa:       'NASA'
 };
 let currentSkin = null;
 let autoRotate  = true;   // can be disabled by manual header click
@@ -1353,8 +1592,8 @@ function showSkinToast(skin) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// Skin per hour: cada hora exacta rota cíclicamente entre las 4 skins
-// 00→broadcast 01→cyberpunk 02→minimal 03→retro 04→broadcast ...
+// Skin per hour: cada hora exacta rota cíclicamente entre las 5 skins
+// 00→broadcast 01→cyberpunk 02→minimal 03→retro 04→nasa 05→broadcast ...
 function skinForHour(h) {
   return SKINS[h % SKINS.length];
 }
