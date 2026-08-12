@@ -1017,6 +1017,85 @@ input[type=range]::-moz-range-thumb {
 #logExportBtn { margin-left: 0; }
 
 
+
+/* ═══════════════════════════════════════════════
+   ALARM BUTTON
+═══════════════════════════════════════════════ */
+.alarm-btn {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--inset);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.alarm-icon { font-size: 0.85rem; line-height: 1; }
+.alarm-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.5rem; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* Active state — alarm is ON and firing */
+.alarm-btn.firing {
+  border-color: var(--red);
+  background: rgba(255,56,32,0.12);
+  animation: alarmBtnPulse 0.8s ease infinite alternate;
+}
+.alarm-btn.firing .alarm-label { color: var(--red); }
+@keyframes alarmBtnPulse {
+  from { box-shadow: 0 0 4px rgba(255,56,32,0.4); }
+  to   { box-shadow: 0 0 14px rgba(255,56,32,0.8); }
+}
+
+/* Paused state — alarm triggered but silenced by user */
+.alarm-btn.paused {
+  border-color: var(--amber);
+  background: rgba(255,140,32,0.08);
+}
+.alarm-btn.paused .alarm-icon::after { content: ''; }
+.alarm-btn.paused .alarm-label { color: var(--amber); }
+.alarm-btn.paused .alarm-icon { opacity: 0.5; }
+
+/* Channel paused overlay */
+.ch-header { position: relative; }
+.channel.alarm-paused { border-left: 3px solid var(--amber); }
+
+.alarm-paused-overlay {
+  display: none;
+  position: absolute; inset: 0; z-index: 50;
+  background: rgba(2, 8, 16, 0.82);
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 0.6rem;
+  pointer-events: all;
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+}
+.channel.alarm-paused .alarm-paused-overlay { display: flex; }
+
+.paused-icon {
+  font-size: 3.5rem; line-height: 1;
+  animation: pausedPulse 1.8s ease-in-out infinite;
+}
+@keyframes pausedPulse {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.paused-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.6rem; font-weight: 700;
+  letter-spacing: 0.25em; color: var(--amber);
+  text-shadow: 0 0 20px var(--amber), 0 0 40px rgba(255,140,32,0.5);
+}
+.paused-sub {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.55rem; color: var(--amber);
+  letter-spacing: 0.2em; opacity: 0.7;
+}
+
 /* ═══════════════════════════════════════════════
    TOOLTIPS
 ═══════════════════════════════════════════════ */
@@ -1107,7 +1186,7 @@ input[type=range]::-moz-range-thumb {
   .tb-tag { font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
   .on-air-text { font-size: 0.85rem; letter-spacing: 0.2em; }
   .on-air-lamp { width: 0.7rem; height: 0.7rem; }
-  .skin-switcher { display: none; }
+  .skin-switcher { display: none !important; }
   .tb-sep { display: none; }
 
   .ch-header { padding: 0.5rem 0.75rem; }
@@ -1156,7 +1235,7 @@ input[type=range]::-moz-range-thumb {
   .tb-tag { font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
   .tb-clock { font-size: 1.4rem; }
   .on-air-text { font-size: 1rem; }
-  .skin-switcher { display: none; }
+  .skin-switcher { display: none !important; }
   #logSection { max-height: none; overflow-x: hidden; }
   #logBody { max-height: 200px; overflow-y: auto; overflow-x: hidden; }
   .log-entry { flex-wrap: wrap; gap: 0.2rem; }
@@ -1328,11 +1407,7 @@ input[type=range]::-moz-range-thumb {
       <span class="tb-clock" id="headerTime" data-tooltip="Hora actual del sistema">--:--:--</span>
       <div class="tb-sep"></div>
       <div class="skin-switcher" id="skinSwitcher" data-tooltip="Cambiar interfaz visual&#10;sin interrumpir el monitoreo">
-        <div class="sw-btn" data-skin="broadcast" title="Broadcast"><div class="sw-dot"></div></div>
-        <div class="sw-btn" data-skin="cyberpunk"  title="Cyberpunk"><div class="sw-dot"></div></div>
-        <div class="sw-btn" data-skin="minimal"    title="Minimal"><div class="sw-dot"></div></div>
-        <div class="sw-btn" data-skin="retro"      title="Retro 80s"><div class="sw-dot"></div></div>
-        <div class="sw-btn" data-skin="nasa"       title="NASA"><div class="sw-dot"></div></div>
+        <!-- skin: nasa only -->
       </div>
     </div>
   </div>
@@ -1341,7 +1416,7 @@ input[type=range]::-moz-range-thumb {
     <div id="channels">
 
       <!-- CH 1 · AM 1110 -->
-      <div class="channel">
+      <div class="channel" style="position:relative">
         <div class="ch-header">
           <div class="ch-id">
             <span class="ch-num">CH·01</span>
@@ -1352,6 +1427,15 @@ input[type=range]::-moz-range-thumb {
             <div class="led"></div>
             <span class="ch-status-text" id="statusText1">Init</span>
           </div>
+          <button class="alarm-btn" id="alarmBtn1" data-tooltip="Pausar / reanudar alarma sonora&#10;La alarma suena tras 2 min de corte" onclick="toggleAlarm(1)">
+            <span class="alarm-icon">🔔</span>
+            <span class="alarm-label" id="alarmLabel1">ALARM</span>
+          </button>
+        </div>
+        <div class="alarm-paused-overlay" onclick="toggleAlarm(1)">
+          <div class="paused-icon">⏸</div>
+          <div class="paused-text">ALARMA PAUSADA</div>
+          <div class="paused-sub">TOQUE PARA REANUDAR</div>
         </div>
         <div class="ch-vu" data-tooltip="VU Meter — Nivel de señal de audio&#10;Verde: normal · Amarillo: alto · Rojo: sobrecarga&#10;L = canal izquierdo · R = canal derecho">
           <div class="vu-row">
@@ -1430,7 +1514,7 @@ input[type=range]::-moz-range-thumb {
       </div>
 
       <!-- CH 2 · FM 92.7 -->
-      <div class="channel">
+      <div class="channel" style="position:relative">
         <div class="ch-header">
           <div class="ch-id">
             <span class="ch-num">CH·02</span>
@@ -1441,6 +1525,15 @@ input[type=range]::-moz-range-thumb {
             <div class="led"></div>
             <span class="ch-status-text" id="statusText2">Init</span>
           </div>
+          <button class="alarm-btn" id="alarmBtn2" data-tooltip="Pausar / reanudar alarma sonora&#10;La alarma suena tras 2 min de corte" onclick="toggleAlarm(2)">
+            <span class="alarm-icon">🔔</span>
+            <span class="alarm-label" id="alarmLabel2">ALARM</span>
+          </button>
+        </div>
+        <div class="alarm-paused-overlay" onclick="toggleAlarm(2)">
+          <div class="paused-icon">⏸</div>
+          <div class="paused-text">ALARMA PAUSADA</div>
+          <div class="paused-sub">TOQUE PARA REANUDAR</div>
         </div>
         <div class="ch-vu" data-tooltip="VU Meter — Nivel de señal de audio&#10;Verde: normal · Amarillo: alto · Rojo: sobrecarga&#10;L = canal izquierdo · R = canal derecho">
           <div class="vu-row">
@@ -1557,7 +1650,7 @@ const SKIN_NAMES = {
   nasa:       'NASA'
 };
 let currentSkin = null;
-let autoRotate  = true;   // can be disabled by manual header click
+let autoRotate  = false;  // nasa only
 
 function applySkin(skin, animated = false, showToast = false) {
   if (animated) {
@@ -1630,9 +1723,8 @@ document.querySelectorAll('.sw-btn').forEach(btn => {
   });
 });
 
-// Init: apply skin for current hour
-const initSkin = skinForHour(new Date().getHours());
-applySkin(initSkin);
+// Always NASA
+applySkin('nasa');
 lastHourChecked = new Date().getHours();
 document.getElementById('startBtn').classList.add('ready');
 
@@ -1641,6 +1733,7 @@ document.getElementById('startBtn').classList.add('ready');
 ═══════════════════════════════════════════ */
 document.getElementById('startBtn').addEventListener('click', () => {
   if (!currentSkin) return;
+  initAlarmAudio(); // init AudioContext on user gesture
   document.getElementById('intro').classList.add('fade-out');
   setTimeout(() => document.getElementById('intro').style.display = 'none', 800);
   document.getElementById('app').classList.add('visible');
@@ -1726,6 +1819,164 @@ function updateTimeline(id, history) {
       if (history[j].ts <= slotEnd) { state = history[j].state; break; }
     }
     segs[i].className = 'tl-seg tl-' + state;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   ALARM SYSTEM
+═══════════════════════════════════════════ */
+const ALARM_DELAY_MS = 1 * 60 * 1000; // 1 minute before alarm fires
+
+// Shared AudioContext — created on user gesture (startBtn click)
+let sharedAudioCtx = null;
+
+function initAlarmAudio() {
+  if (sharedAudioCtx) return;
+  try {
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // Play a silent buffer to unlock audio on iOS/Android
+    const buf = sharedAudioCtx.createBuffer(1, 1, 22050);
+    const src = sharedAudioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(sharedAudioCtx.destination);
+    src.start(0);
+    console.log('Alarm audio initialized, state:', sharedAudioCtx.state);
+  } catch(e) {
+    console.warn('Audio init failed:', e);
+  }
+}
+
+// Per-channel alarm state
+const alarmState = {
+  1: { paused: false, firing: false, timer: null, gainNode: null, beepActive: false },
+  2: { paused: false, firing: false, timer: null, gainNode: null, beepActive: false },
+};
+
+function getOrCreateGain(ch) {
+  const s = alarmState[ch];
+  if (!s.gainNode && sharedAudioCtx) {
+    s.gainNode = sharedAudioCtx.createGain();
+    s.gainNode.gain.value = 0;
+    s.gainNode.connect(sharedAudioCtx.destination);
+  }
+  return s.gainNode;
+}
+
+function startAlarmBeep(ch) {
+  const s = alarmState[ch];
+  if (!sharedAudioCtx) {
+    console.warn('AudioContext not ready');
+    return;
+  }
+  if (sharedAudioCtx.state === 'suspended') {
+    sharedAudioCtx.resume().then(() => startAlarmBeep(ch));
+    return;
+  }
+
+  s.firing = true;
+  s.beepActive = true;
+  updateAlarmBtn(ch);
+
+  const gain = getOrCreateGain(ch);
+  if (!gain) return;
+
+  let beepOn = true;
+  function beep() {
+    if (!s.beepActive || s.paused || !s.firing) {
+      gain.gain.setTargetAtTime(0, sharedAudioCtx.currentTime, 0.05);
+      return;
+    }
+    const osc = sharedAudioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = beepOn ? 1200 : 800;
+    beepOn = !beepOn;
+    osc.connect(gain);
+    gain.gain.cancelScheduledValues(sharedAudioCtx.currentTime);
+    gain.gain.setValueAtTime(0, sharedAudioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, sharedAudioCtx.currentTime + 0.02);
+    gain.gain.linearRampToValueAtTime(0, sharedAudioCtx.currentTime + 0.22);
+    osc.start(sharedAudioCtx.currentTime);
+    osc.stop(sharedAudioCtx.currentTime + 0.25);
+    osc.onended = () => {
+      if (s.beepActive && s.firing && !s.paused) {
+        setTimeout(beep, 180);
+      }
+    };
+  }
+  beep();
+}
+
+function stopAlarm(ch) {
+  const s = alarmState[ch];
+  s.firing = false;
+  s.beepActive = false;
+  if (s.gainNode && sharedAudioCtx) {
+    s.gainNode.gain.cancelScheduledValues(sharedAudioCtx.currentTime);
+    s.gainNode.gain.setTargetAtTime(0, sharedAudioCtx.currentTime, 0.05);
+  }
+  if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+  updateAlarmBtn(ch);
+  document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
+}
+
+function scheduleAlarm(ch) {
+  const s = alarmState[ch];
+  if (s.timer || s.firing) return; // already scheduled or firing
+  s.timer = setTimeout(() => {
+    s.timer = null;
+    if (!s.paused) startAlarmBeep(ch);
+    else updateAlarmBtn(ch); // still show paused state
+  }, ALARM_DELAY_MS);
+}
+
+function cancelAlarmSchedule(ch) {
+  const s = alarmState[ch];
+  if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+  stopAlarm(ch);
+  s.paused = false;
+  document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
+  updateAlarmBtn(ch);
+}
+
+function toggleAlarm(ch) {
+  const s = alarmState[ch];
+  if (!s.firing && !s.timer) return; // nothing to pause — alarm not triggered yet
+
+  s.paused = !s.paused;
+
+  if (s.paused) {
+    // Pause: silence the beep but keep firing state visible
+    s.beepActive = false;
+    if (s.gainNode && sharedAudioCtx) s.gainNode.gain.setTargetAtTime(0, sharedAudioCtx.currentTime, 0.05);
+    document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.add('alarm-paused');
+  } else {
+    // Resume: restart beeping
+    document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
+    s.beepActive = true;
+    if (s.firing) startAlarmBeep(ch);
+  }
+  updateAlarmBtn(ch);
+}
+
+function updateAlarmBtn(ch) {
+  const btn   = document.getElementById('alarmBtn' + ch);
+  const label = document.getElementById('alarmLabel' + ch);
+  const icon  = btn.querySelector('.alarm-icon');
+  const s     = alarmState[ch];
+
+  btn.classList.remove('firing','paused');
+  icon.textContent = '🔔';
+  label.textContent = 'ALARM';
+
+  if (s.firing && !s.paused) {
+    btn.classList.add('firing');
+    icon.textContent = '🔔';
+    label.textContent = 'FIRING';
+  } else if (s.paused || s.timer) {
+    btn.classList.add('paused');
+    icon.textContent = '🔕';
+    label.textContent = s.firing ? 'PAUSED' : 'PENDING';
   }
 }
 
@@ -1937,6 +2188,13 @@ function setupRadio(audioUrl, cfg) {
     const isAlert = ['offline','error','stalled','silence'].includes(state);
     cfg.channelEl.classList.toggle('alert-flash', isAlert);
 
+    // Alarm system
+    if (isAlert) {
+      scheduleAlarm(cfg.chNum);
+    } else {
+      cancelAlarmSchedule(cfg.chNum);
+    }
+
     // Auto-reconnect on hard failures
     if (['offline','error'].includes(state)) {
       scheduleReconnect();
@@ -2067,12 +2325,15 @@ function setupRadio(audioUrl, cfg) {
     if (!audioCtx) initAudio();
     if (audioCtx?.state === 'suspended') audioCtx.resume();
     if (audio.muted) audio.muted = false;
+    // Also unlock alarm audio
+    if (sharedAudioCtx?.state === 'suspended') sharedAudioCtx.resume();
+    if (!sharedAudioCtx) initAlarmAudio();
   }, { once: true });
 }
 
 function initRadios() {
   setupRadio("https://media.radios.ar:1110/", {
-    chName: 'AM 1110', chClass: 'ch1',
+    chName: 'AM 1110', chClass: 'ch1', chNum: 1,
     channelEl:   document.querySelector('#channels .channel:nth-child(1)'),
     statusEl:    document.getElementById('status1'),
     statusTextEl:document.getElementById('statusText1'),
@@ -2093,7 +2354,7 @@ function initRadios() {
     muteBtn:     document.getElementById('muteBtn1'),
   });
   setupRadio("https://media.radios.ar:9270/", {
-    chName: 'FM 92.7', chClass: 'ch2',
+    chName: 'FM 92.7', chClass: 'ch2', chNum: 2,
     channelEl:   document.querySelector('#channels .channel:nth-child(2)'),
     statusEl:    document.getElementById('status2'),
     statusTextEl:document.getElementById('statusText2'),
