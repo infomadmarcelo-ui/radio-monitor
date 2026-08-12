@@ -1427,12 +1427,12 @@ input[type=range]::-moz-range-thumb {
             <div class="led"></div>
             <span class="ch-status-text" id="statusText1">Init</span>
           </div>
-          <button class="alarm-btn" id="alarmBtn1" data-tooltip="Pausar / reanudar alarma sonora&#10;La alarma suena tras 2 min de corte" onclick="toggleAlarm(1)">
+          <button class="alarm-btn" id="alarmBtn1" data-tooltip="Pausar / reanudar alarma&#10;Sin alarma activa: prueba el sonido&#10;La alarma suena tras 1 min de corte" onclick="toggleAlarm(1)">
             <span class="alarm-icon">🔔</span>
             <span class="alarm-label" id="alarmLabel1">ALARM</span>
           </button>
         </div>
-        <div class="alarm-paused-overlay" onclick="toggleAlarm(1)">
+        <div class="alarm-paused-overlay" onclick="toggleAlarm(1)" style="display:none">
           <div class="paused-icon">⏸</div>
           <div class="paused-text">ALARMA PAUSADA</div>
           <div class="paused-sub">TOQUE PARA REANUDAR</div>
@@ -1525,12 +1525,12 @@ input[type=range]::-moz-range-thumb {
             <div class="led"></div>
             <span class="ch-status-text" id="statusText2">Init</span>
           </div>
-          <button class="alarm-btn" id="alarmBtn2" data-tooltip="Pausar / reanudar alarma sonora&#10;La alarma suena tras 2 min de corte" onclick="toggleAlarm(2)">
+          <button class="alarm-btn" id="alarmBtn2" data-tooltip="Pausar / reanudar alarma&#10;Sin alarma activa: prueba el sonido&#10;La alarma suena tras 1 min de corte" onclick="toggleAlarm(2)">
             <span class="alarm-icon">🔔</span>
             <span class="alarm-label" id="alarmLabel2">ALARM</span>
           </button>
         </div>
-        <div class="alarm-paused-overlay" onclick="toggleAlarm(2)">
+        <div class="alarm-paused-overlay" onclick="toggleAlarm(2)" style="display:none">
           <div class="paused-icon">⏸</div>
           <div class="paused-text">ALARMA PAUSADA</div>
           <div class="paused-sub">TOQUE PARA REANUDAR</div>
@@ -1826,157 +1826,167 @@ function updateTimeline(id, history) {
 /* ═══════════════════════════════════════════
    ALARM SYSTEM
 ═══════════════════════════════════════════ */
-const ALARM_DELAY_MS = 1 * 60 * 1000; // 1 minute before alarm fires
+const ALARM_DELAY_MS = 1 * 60 * 1000; // 1 min
 
-// Shared AudioContext — created on user gesture (startBtn click)
 let sharedAudioCtx = null;
 
 function initAlarmAudio() {
   if (sharedAudioCtx) return;
   try {
     sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    // Play a silent buffer to unlock audio on iOS/Android
+    // Unlock with silent buffer
     const buf = sharedAudioCtx.createBuffer(1, 1, 22050);
     const src = sharedAudioCtx.createBufferSource();
     src.buffer = buf;
     src.connect(sharedAudioCtx.destination);
     src.start(0);
-    console.log('Alarm audio initialized, state:', sharedAudioCtx.state);
-  } catch(e) {
-    console.warn('Audio init failed:', e);
-  }
+    console.log('Alarm audio ready, state:', sharedAudioCtx.state);
+  } catch(e) { console.warn('Audio init failed:', e); }
 }
 
-// Per-channel alarm state
-const alarmState = {
-  1: { paused: false, firing: false, timer: null, gainNode: null, beepActive: false },
-  2: { paused: false, firing: false, timer: null, gainNode: null, beepActive: false },
+// alarm[ch] = { timer, firing, silenced }
+const alarm = {
+  1: { timer: null, firing: false, silenced: false, loopId: null },
+  2: { timer: null, firing: false, silenced: false, loopId: null },
 };
 
-function getOrCreateGain(ch) {
-  const s = alarmState[ch];
-  if (!s.gainNode && sharedAudioCtx) {
-    s.gainNode = sharedAudioCtx.createGain();
-    s.gainNode.gain.value = 0;
-    s.gainNode.connect(sharedAudioCtx.destination);
-  }
-  return s.gainNode;
-}
-
-function startAlarmBeep(ch) {
-  const s = alarmState[ch];
+function playBeep(ch) {
+  const a = alarm[ch];
+  if (!a.firing || a.silenced) return;
   if (!sharedAudioCtx) {
-    console.warn('AudioContext not ready');
-    return;
+    initAlarmAudio();
+    if (!sharedAudioCtx) return;
   }
   if (sharedAudioCtx.state === 'suspended') {
-    sharedAudioCtx.resume().then(() => startAlarmBeep(ch));
+    sharedAudioCtx.resume().then(() => {
+      setTimeout(() => playBeep(ch), 50);
+    }).catch(() => {});
     return;
   }
 
-  s.firing = true;
-  s.beepActive = true;
-  updateAlarmBtn(ch);
-
-  const gain = getOrCreateGain(ch);
-  if (!gain) return;
-
-  let beepOn = true;
-  function beep() {
-    if (!s.beepActive || s.paused || !s.firing) {
-      gain.gain.setTargetAtTime(0, sharedAudioCtx.currentTime, 0.05);
-      return;
-    }
+  // Two-tone beep: 1200Hz then 800Hz
+  function tone(freq, startAt, duration) {
     const osc = sharedAudioCtx.createOscillator();
+    const g   = sharedAudioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.value = beepOn ? 1200 : 800;
-    beepOn = !beepOn;
-    osc.connect(gain);
-    gain.gain.cancelScheduledValues(sharedAudioCtx.currentTime);
-    gain.gain.setValueAtTime(0, sharedAudioCtx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.3, sharedAudioCtx.currentTime + 0.02);
-    gain.gain.linearRampToValueAtTime(0, sharedAudioCtx.currentTime + 0.22);
-    osc.start(sharedAudioCtx.currentTime);
-    osc.stop(sharedAudioCtx.currentTime + 0.25);
-    osc.onended = () => {
-      if (s.beepActive && s.firing && !s.paused) {
-        setTimeout(beep, 180);
-      }
-    };
+    osc.frequency.value = freq;
+    osc.connect(g);
+    g.connect(sharedAudioCtx.destination);
+    g.gain.setValueAtTime(0, startAt);
+    g.gain.linearRampToValueAtTime(0.35, startAt + 0.02);
+    g.gain.linearRampToValueAtTime(0, startAt + duration - 0.02);
+    osc.start(startAt);
+    osc.stop(startAt + duration);
   }
-  beep();
+
+  const now = sharedAudioCtx.currentTime;
+  tone(1200, now,        0.2);
+  tone(800,  now + 0.25, 0.2);
+
+  // Schedule next beep in 800ms
+  a.loopId = setTimeout(() => {
+    if (a.firing && !a.silenced) playBeep(ch);
+  }, 800);
 }
 
-function stopAlarm(ch) {
-  const s = alarmState[ch];
-  s.firing = false;
-  s.beepActive = false;
-  if (s.gainNode && sharedAudioCtx) {
-    s.gainNode.gain.cancelScheduledValues(sharedAudioCtx.currentTime);
-    s.gainNode.gain.setTargetAtTime(0, sharedAudioCtx.currentTime, 0.05);
-  }
-  if (s.timer) { clearTimeout(s.timer); s.timer = null; }
+function fireAlarm(ch) {
+  const a = alarm[ch];
+  a.timer   = null;
+  a.firing  = true;
+  a.silenced = false;
   updateAlarmBtn(ch);
-  document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
+  showPausedOverlay(ch, false);
+  playBeep(ch);
+  console.log('ALARM FIRED ch', ch);
 }
 
 function scheduleAlarm(ch) {
-  const s = alarmState[ch];
-  if (s.timer || s.firing) return; // already scheduled or firing
-  s.timer = setTimeout(() => {
-    s.timer = null;
-    if (!s.paused) startAlarmBeep(ch);
-    else updateAlarmBtn(ch); // still show paused state
-  }, ALARM_DELAY_MS);
+  const a = alarm[ch];
+  if (a.timer || a.firing) return;
+  console.log('Alarm scheduled ch', ch, 'in', ALARM_DELAY_MS/1000, 's');
+  a.timer = setTimeout(() => fireAlarm(ch), ALARM_DELAY_MS);
 }
 
-function cancelAlarmSchedule(ch) {
-  const s = alarmState[ch];
-  if (s.timer) { clearTimeout(s.timer); s.timer = null; }
-  stopAlarm(ch);
-  s.paused = false;
-  document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
+function cancelAlarm(ch) {
+  const a = alarm[ch];
+  if (a.timer)  { clearTimeout(a.timer);  a.timer   = null; }
+  if (a.loopId) { clearTimeout(a.loopId); a.loopId  = null; }
+  a.firing   = false;
+  a.silenced = false;
   updateAlarmBtn(ch);
+  showPausedOverlay(ch, false);
+  document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
+}
+
+function testBeep(ch) {
+  // Play a short test tone to verify audio works
+  if (!sharedAudioCtx) initAlarmAudio();
+  if (!sharedAudioCtx) { alert('No se pudo iniciar el audio. Hacé clic en la página primero.'); return; }
+  if (sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
+  const now = sharedAudioCtx.currentTime;
+  [1200, 800, 1200].forEach((freq, i) => {
+    const osc = sharedAudioCtx.createOscillator();
+    const g = sharedAudioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    osc.connect(g); g.connect(sharedAudioCtx.destination);
+    const t = now + i * 0.25;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.35, t + 0.02);
+    g.gain.linearRampToValueAtTime(0, t + 0.2);
+    osc.start(t); osc.stop(t + 0.22);
+  });
 }
 
 function toggleAlarm(ch) {
-  const s = alarmState[ch];
-  if (!s.firing && !s.timer) return; // nothing to pause — alarm not triggered yet
+  const a = alarm[ch];
+  // If no alarm active, clicking plays a test beep so user can verify sound
+  if (!a.firing && !a.timer) {
+    testBeep(ch);
+    return;
+  }
 
-  s.paused = !s.paused;
+  a.silenced = !a.silenced;
 
-  if (s.paused) {
-    // Pause: silence the beep but keep firing state visible
-    s.beepActive = false;
-    if (s.gainNode && sharedAudioCtx) s.gainNode.gain.setTargetAtTime(0, sharedAudioCtx.currentTime, 0.05);
+  if (a.silenced) {
+    // Stop beep loop
+    if (a.loopId) { clearTimeout(a.loopId); a.loopId = null; }
     document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.add('alarm-paused');
+    showPausedOverlay(ch, true);
   } else {
-    // Resume: restart beeping
+    // Resume beeping
     document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
-    s.beepActive = true;
-    if (s.firing) startAlarmBeep(ch);
+    showPausedOverlay(ch, false);
+    if (a.firing) playBeep(ch);
   }
   updateAlarmBtn(ch);
 }
 
+function showPausedOverlay(ch, show) {
+  const overlays = document.querySelectorAll('.alarm-paused-overlay');
+  if (overlays[ch-1]) overlays[ch-1].style.display = show ? 'flex' : 'none';
+}
+
 function updateAlarmBtn(ch) {
+  const a     = alarm[ch];
   const btn   = document.getElementById('alarmBtn' + ch);
   const label = document.getElementById('alarmLabel' + ch);
   const icon  = btn.querySelector('.alarm-icon');
-  const s     = alarmState[ch];
 
   btn.classList.remove('firing','paused');
-  icon.textContent = '🔔';
+  icon.textContent  = '🔔';
   label.textContent = 'ALARM';
 
-  if (s.firing && !s.paused) {
+  if (a.firing && !a.silenced) {
     btn.classList.add('firing');
-    icon.textContent = '🔔';
     label.textContent = 'FIRING';
-  } else if (s.paused || s.timer) {
+  } else if (a.firing && a.silenced) {
     btn.classList.add('paused');
-    icon.textContent = '🔕';
-    label.textContent = s.firing ? 'PAUSED' : 'PENDING';
+    icon.textContent  = '🔕';
+    label.textContent = 'PAUSADA';
+  } else if (a.timer) {
+    btn.classList.add('paused');
+    icon.textContent  = '🔔';
+    label.textContent = 'PENDING';
   }
 }
 
@@ -2192,7 +2202,7 @@ function setupRadio(audioUrl, cfg) {
     if (isAlert) {
       scheduleAlarm(cfg.chNum);
     } else {
-      cancelAlarmSchedule(cfg.chNum);
+      cancelAlarm(cfg.chNum);
     }
 
     // Auto-reconnect on hard failures
@@ -2326,7 +2336,7 @@ function setupRadio(audioUrl, cfg) {
     if (audioCtx?.state === 'suspended') audioCtx.resume();
     if (audio.muted) audio.muted = false;
     // Also unlock alarm audio
-    if (sharedAudioCtx?.state === 'suspended') sharedAudioCtx.resume();
+    if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume();
     if (!sharedAudioCtx) initAlarmAudio();
   }, { once: true });
 }
