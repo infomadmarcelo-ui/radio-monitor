@@ -1018,6 +1018,41 @@ input[type=range]::-moz-range-thumb {
 
 
 
+
+/* ═══════════════════════════════════════════════
+   DOWN TIMER (countdown to alarm)
+═══════════════════════════════════════════════ */
+.down-timer {
+  display: none;
+  align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  background: rgba(255,56,32,0.1);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem; font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--red);
+  text-shadow: 0 0 8px var(--red);
+}
+.down-timer.active { display: flex; }
+.down-timer::before {
+  content: '⏱';
+  font-size: 0.85rem;
+}
+.down-timer.imminent {
+  animation: timerPulse 0.5s ease infinite alternate;
+}
+@keyframes timerPulse {
+  from { background: rgba(255,56,32,0.1); }
+  to   { background: rgba(255,56,32,0.35); box-shadow: 0 0 12px rgba(255,56,32,0.5); }
+}
+.down-timer.alarming {
+  border-color: var(--red);
+  background: rgba(255,56,32,0.4);
+  animation: timerPulse 0.3s ease infinite alternate;
+}
+
 /* ═══════════════════════════════════════════════
    ALARM BUTTON
 ═══════════════════════════════════════════════ */
@@ -1427,6 +1462,7 @@ input[type=range]::-moz-range-thumb {
             <div class="led"></div>
             <span class="ch-status-text" id="statusText1">Init</span>
           </div>
+          <div class="down-timer" id="downTimer1" data-tooltip="Tiempo que lleva caída la radio&#10;La alarma suena al llegar a 1:00"></div>
           <button class="alarm-btn" id="alarmBtn1" data-tooltip="Pausar / reanudar alarma&#10;Sin alarma activa: prueba el sonido&#10;La alarma suena tras 1 min de corte" onclick="toggleAlarm(1)">
             <span class="alarm-icon">🔔</span>
             <span class="alarm-label" id="alarmLabel1">ALARM</span>
@@ -1525,6 +1561,7 @@ input[type=range]::-moz-range-thumb {
             <div class="led"></div>
             <span class="ch-status-text" id="statusText2">Init</span>
           </div>
+          <div class="down-timer" id="downTimer2" data-tooltip="Tiempo que lleva caída la radio&#10;La alarma suena al llegar a 1:00"></div>
           <button class="alarm-btn" id="alarmBtn2" data-tooltip="Pausar / reanudar alarma&#10;Sin alarma activa: prueba el sonido&#10;La alarma suena tras 1 min de corte" onclick="toggleAlarm(2)">
             <span class="alarm-icon">🔔</span>
             <span class="alarm-label" id="alarmLabel2">ALARM</span>
@@ -1846,9 +1883,40 @@ function initAlarmAudio() {
 
 // alarm[ch] = { timer, firing, silenced }
 const alarm = {
-  1: { timer: null, firing: false, silenced: false, loopId: null },
-  2: { timer: null, firing: false, silenced: false, loopId: null },
+  1: { timer: null, firing: false, silenced: false, loopId: null, downSince: null },
+  2: { timer: null, firing: false, silenced: false, loopId: null, downSince: null },
 };
+
+// Update down-timers every second
+setInterval(() => {
+  [1, 2].forEach(ch => {
+    const a = alarm[ch];
+    const el = document.getElementById('downTimer' + ch);
+    if (!el) return;
+    if (a.downSince === null) {
+      el.classList.remove('active','imminent','alarming');
+      return;
+    }
+    const elapsed = Math.floor((Date.now() - a.downSince) / 1000);
+    const remaining = Math.max(0, Math.ceil(ALARM_DELAY_MS/1000) - elapsed);
+    el.classList.add('active');
+
+    if (a.firing) {
+      const mm = Math.floor(elapsed / 60);
+      const ss = elapsed % 60;
+      el.textContent = 'CAÍDA ' + mm + ':' + String(ss).padStart(2,'0');
+      el.classList.remove('imminent');
+      el.classList.add('alarming');
+    } else {
+      const mm = Math.floor(remaining / 60);
+      const ss = remaining % 60;
+      el.textContent = 'ALARMA EN ' + mm + ':' + String(ss).padStart(2,'0');
+      el.classList.remove('alarming');
+      if (remaining <= 15) el.classList.add('imminent');
+      else el.classList.remove('imminent');
+    }
+  });
+}, 1000);
 
 function playBeep(ch) {
   const a = alarm[ch];
@@ -1903,6 +1971,7 @@ function fireAlarm(ch) {
 function scheduleAlarm(ch) {
   const a = alarm[ch];
   if (a.timer || a.firing) return;
+  a.downSince = Date.now();
   console.log('Alarm scheduled ch', ch, 'in', ALARM_DELAY_MS/1000, 's');
   a.timer = setTimeout(() => fireAlarm(ch), ALARM_DELAY_MS);
 }
@@ -1913,8 +1982,11 @@ function cancelAlarm(ch) {
   if (a.loopId) { clearTimeout(a.loopId); a.loopId  = null; }
   a.firing   = false;
   a.silenced = false;
+  a.downSince = null;
   updateAlarmBtn(ch);
   showPausedOverlay(ch, false);
+  const el = document.getElementById('downTimer' + ch);
+  if (el) el.classList.remove('active','imminent','alarming');
   document.querySelector('#channels .channel:nth-child(' + ch + ')').classList.remove('alarm-paused');
 }
 
@@ -2198,12 +2270,14 @@ function setupRadio(audioUrl, cfg) {
     const isAlert = ['offline','error','stalled','silence'].includes(state);
     cfg.channelEl.classList.toggle('alert-flash', isAlert);
 
-    // Alarm system
-    if (isAlert) {
-      scheduleAlarm(cfg.chNum);
-    } else {
+    // Alarm system — only cancel when fully online; keep timer running through
+    // any problem state (error/buffering oscillation shouldn't reset the countdown)
+    if (state === 'online') {
       cancelAlarm(cfg.chNum);
+    } else if (isAlert) {
+      scheduleAlarm(cfg.chNum);
     }
+    // buffering: neither cancel nor reschedule — let existing timer keep running
 
     // Auto-reconnect on hard failures
     if (['offline','error'].includes(state)) {
