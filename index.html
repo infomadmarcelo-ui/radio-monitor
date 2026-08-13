@@ -2167,7 +2167,7 @@ function diagnose(state, lastFetchOk) {
   }
   if (state === 'buffering') return { text: 'Problema de red o latencia alta', cls: 'warn' };
   if (state === 'stalled')   return { text: 'Sin datos del servidor', cls: 'warn' };
-  if (state === 'silence')   return { text: 'Dead air · ¿falla automatización?', cls: 'warn' };
+  if (state === 'silence')   return { text: 'Servidor conectado pero sin audio', cls: 'warn' };
   if (state === 'online')    return { text: 'Transmisión normal', cls: '' };
   return { text: '', cls: '' };
 }
@@ -2376,12 +2376,52 @@ function setupRadio(audioUrl, cfg) {
   }
 
   // HTML5 audio events
-  audio.addEventListener('playing',  () => setState('online'));
-  audio.addEventListener('waiting',  () => setState('buffering'));
-  audio.addEventListener('stalled',  () => setState('stalled'));
-  audio.addEventListener('ended',    () => setState('offline'));
-  audio.addEventListener('error',    () => setState('error'));
-  audio.addEventListener('pause',    () => { if (!isMuted) setState('offline'); });
+  // 'stalled' and 'waiting' fire often on busy machines (many tabs, shared network)
+  // even when the stream is fine. We debounce them: only flag a problem if the
+  // condition persists. A quick recovery ('playing') cancels the pending flag.
+  let stalledTimer = null;
+  let waitingTimer = null;
+
+  function clearTransientTimers() {
+    if (stalledTimer) { clearTimeout(stalledTimer); stalledTimer = null; }
+    if (waitingTimer) { clearTimeout(waitingTimer); waitingTimer = null; }
+  }
+
+  audio.addEventListener('playing', () => {
+    clearTransientTimers();
+    setState('online');
+  });
+
+  audio.addEventListener('waiting', () => {
+    // Wait 4s before declaring buffering — most are momentary
+    if (waitingTimer) return;
+    waitingTimer = setTimeout(() => {
+      waitingTimer = null;
+      if (!audio.paused && audio.readyState < 3) setState('buffering');
+    }, 4000);
+  });
+
+  audio.addEventListener('stalled', () => {
+    // Wait 8s before declaring stalled — browsers fire this liberally
+    if (stalledTimer) return;
+    stalledTimer = setTimeout(() => {
+      stalledTimer = null;
+      // Only flag if the audio really isn't progressing
+      if (!audio.paused && audio.readyState < 3) setState('stalled');
+    }, 8000);
+  });
+
+  audio.addEventListener('ended',   () => { clearTransientTimers(); setState('offline'); });
+  audio.addEventListener('error',   () => { clearTransientTimers(); setState('error'); });
+  audio.addEventListener('pause',   () => { if (!isMuted) setState('offline'); });
+
+  // 'canplay' / 'playing' means data is flowing again
+  audio.addEventListener('canplay', () => {
+    if (currentState === 'buffering' || currentState === 'stalled') {
+      clearTransientTimers();
+      setState('online');
+    }
+  });
 
   // HTTP stream check + latency measurement every 10s
   const latencyHistory = []; // {ts, ms} — last ~60 samples
@@ -2472,24 +2512,33 @@ function setupRadio(audioUrl, cfg) {
     }, 900);
   }
 
-  let silenceFrames = 0;
-  let soundFrames = 0;
-  const SILENCE_THRESHOLD = 0.015;   // below this = considered silent
-  const SILENCE_FRAMES_TRIGGER = 180; // ~3s of continuous silence to flag dead air
-  const SOUND_FRAMES_RECOVER = 15;    // ~0.25s of sound to clear dead air
+  // Time-based silence detection (robust against requestAnimationFrame throttling
+  // when the tab loses focus or the machine is busy — frame counting is unreliable there)
+  const SILENCE_THRESHOLD = 0.015;      // below this = considered silent
+  const SILENCE_TIME_TRIGGER = 5000;    // 5s of continuous silence to flag dead air
+  const SOUND_TIME_RECOVER = 500;       // 0.5s of sound to clear dead air
+  let silenceStartTs = null;            // when silence began
+  let soundStartTs = null;              // when sound resumed
+
   function detectSilence(level) {
+    const now = performance.now();
+
     if (level < SILENCE_THRESHOLD) {
-      silenceFrames++;
-      soundFrames = 0;
+      // Currently silent
+      if (silenceStartTs === null) silenceStartTs = now;
+      soundStartTs = null;
+      const silentFor = now - silenceStartTs;
+      if (silentFor > SILENCE_TIME_TRIGGER && currentState === 'online') {
+        setState('silence');
+      }
     } else {
-      soundFrames++;
-      if (soundFrames >= SOUND_FRAMES_RECOVER) silenceFrames = 0;
-    }
-    // Trigger dead air only if currently online (server connected, just no audio)
-    if (silenceFrames > SILENCE_FRAMES_TRIGGER && currentState === 'online') {
-      setState('silence');
-    } else if (currentState === 'silence' && soundFrames >= SOUND_FRAMES_RECOVER) {
-      setState('online');
+      // Currently has sound
+      if (soundStartTs === null) soundStartTs = now;
+      const soundFor = now - soundStartTs;
+      if (soundFor > SOUND_TIME_RECOVER) {
+        silenceStartTs = null;
+        if (currentState === 'silence') setState('online');
+      }
     }
   }
 
