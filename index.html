@@ -1021,6 +1021,18 @@ input[type=range]::-moz-range-thumb {
 
 
 
+
+/* ═══════════════════════════════════════════════
+   VERSION LABEL
+═══════════════════════════════════════════════ */
+.app-version {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.75rem;
+  color: rgba(122,184,212,0.45);
+  letter-spacing: 0.1em;
+  margin-top: 0.5rem;
+}
+
 /* ═══════════════════════════════════════════════
    FULLSCREEN BUTTON
 ═══════════════════════════════════════════════ */
@@ -1465,6 +1477,7 @@ input[type=range]::-moz-range-thumb {
   </div>
 
   <button id="startBtn">Iniciar sistema</button>
+  <div class="app-version">v2026.08.14 · 20:10</div>
 </div>
 
 <!-- ═══ APP ═══ -->
@@ -1585,7 +1598,7 @@ input[type=range]::-moz-range-thumb {
             <span class="stat-lbl">Reconexión</span>
             <span class="stat-val" id="recon1">--</span>
           </div>
-          <div class="stat-cell" data-tooltip="Latencia del servidor de streaming&#10;Tiempo de respuesta al ping HTTP&#10;<300ms bueno · <800ms regular · >800ms alto">
+          <div class="stat-cell" data-tooltip="Latencia del servidor de streaming&#10;Tiempo de respuesta al ping HTTP&#10;<1500ms bueno · <2500ms regular · >2500ms alto">
             <span class="stat-lbl">Latencia</span>
             <span class="stat-val" id="latency1">--</span>
           </div>
@@ -1693,7 +1706,7 @@ input[type=range]::-moz-range-thumb {
             <span class="stat-lbl">Reconexión</span>
             <span class="stat-val" id="recon2">--</span>
           </div>
-          <div class="stat-cell" data-tooltip="Latencia del servidor de streaming&#10;Tiempo de respuesta al ping HTTP&#10;<300ms bueno · <800ms regular · >800ms alto">
+          <div class="stat-cell" data-tooltip="Latencia del servidor de streaming&#10;Tiempo de respuesta al ping HTTP&#10;<1500ms bueno · <2500ms regular · >2500ms alto">
             <span class="stat-lbl">Latencia</span>
             <span class="stat-val" id="latency2">--</span>
           </div>
@@ -2489,7 +2502,7 @@ function setupRadio(audioUrl, cfg) {
       el.className = 'stat-val bad';
     } else {
       el.textContent = last.ms + ' ms';
-      el.className = 'stat-val ' + (last.ms < 300 ? 'good' : last.ms < 800 ? 'warn' : 'bad');
+      el.className = 'stat-val ' + (last.ms < 1500 ? 'good' : last.ms < 2500 ? 'warn' : 'bad');
     }
     drawLatencyChart(cfg.latChartId, latencyHistory);
   }
@@ -2705,7 +2718,7 @@ function drawLatencyChart(canvasId, history) {
     const y = padTop + plotH - (last.ms / maxMs) * plotH;
     ctx.beginPath();
     ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fillStyle = last.ms < 300 ? '#00ff9f' : last.ms < 800 ? '#ffd020' : '#ff3820';
+    ctx.fillStyle = last.ms < 1500 ? '#00ff9f' : last.ms < 2500 ? '#ffd020' : '#ff3820';
     ctx.shadowColor = ctx.fillStyle;
     ctx.shadowBlur = 8;
     ctx.fill();
