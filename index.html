@@ -2349,6 +2349,7 @@ function setupRadio(audioUrl, cfg) {
     // any problem state (error/buffering oscillation shouldn't reset the countdown)
     if (state === 'online') {
       cancelAlarm(cfg.chNum);
+      stopReconnect();
     } else if (isAlert) {
       scheduleAlarm(cfg.chNum, state);
     }
@@ -2360,19 +2361,32 @@ function setupRadio(audioUrl, cfg) {
     }
   }
 
-  // Auto-reconnect with backoff
+  // Auto-reconnect: persistent retry loop that keeps trying until the stream
+  // recovers. Runs on a fixed interval so it survives network coming back.
   let reconnectTimer = null;
   function scheduleReconnect() {
-    if (reconnectTimer) return;
-    const delay = Math.min(5000 + reconnectAttempts * 3000, 30000);
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null;
-      if (['offline','error'].includes(currentState)) {
-        reconnectAttempts++;
-        audio.load();
-        audio.play().catch(() => {});
+    if (reconnectTimer) return; // loop already running
+    reconnectTimer = setInterval(() => {
+      // Stop retrying once we're back online
+      if (!['offline','error','stalled'].includes(currentState)) {
+        clearInterval(reconnectTimer);
+        reconnectTimer = null;
+        reconnectAttempts = 0;
+        return;
       }
-    }, delay);
+      reconnectAttempts++;
+      try {
+        // Force a fresh load of the stream and attempt playback
+        audio.load();
+        const p = audio.play();
+        if (p) p.catch(() => {}); // ignore autoplay/temporary errors
+      } catch(e) { /* keep trying */ }
+    }, 5000); // retry every 5 seconds
+  }
+
+  function stopReconnect() {
+    if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
+    reconnectAttempts = 0;
   }
 
   // HTML5 audio events
@@ -2415,11 +2429,30 @@ function setupRadio(audioUrl, cfg) {
   audio.addEventListener('error',   () => { clearTransientTimers(); setState('error'); });
   audio.addEventListener('pause',   () => { if (!isMuted) setState('offline'); });
 
-  // 'canplay' / 'playing' means data is flowing again
-  audio.addEventListener('canplay', () => {
-    if (currentState === 'buffering' || currentState === 'stalled') {
+  // 'canplay' / 'playing' / 'canplaythrough' mean data is flowing again
+  function recoverIfPlaying() {
+    if (['buffering','stalled','offline','error','silence'].includes(currentState)) {
       clearTransientTimers();
-      setState('online');
+      // Ensure playback actually resumes
+      const p = audio.play();
+      if (p) p.then(() => setState('online')).catch(() => {});
+      else setState('online');
+    }
+  }
+  audio.addEventListener('canplay', recoverIfPlaying);
+  audio.addEventListener('canplaythrough', recoverIfPlaying);
+  audio.addEventListener('loadeddata', recoverIfPlaying);
+
+  // Browser-level network status — when the OS/network reports it's back,
+  // force an immediate reconnect attempt instead of waiting for the retry tick
+  window.addEventListener('online', () => {
+    console.log('Network back online — forcing reconnect for', cfg.chName);
+    if (['offline','error','stalled'].includes(currentState)) {
+      try {
+        audio.load();
+        const p = audio.play();
+        if (p) p.catch(() => {});
+      } catch(e) {}
     }
   });
 
