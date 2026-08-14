@@ -195,7 +195,8 @@ body.skin-nasa #app { position: relative; z-index: 1; }
 }
 .skin-nasa .tb-tag {
   font-family: 'Orbitron', sans-serif;
-  font-size: 0.6rem; color: var(--text-dim);
+  font-size: 0.72rem; color: var(--text-bright);
+  text-shadow: 0 0 8px rgba(68,136,255,0.3);
 }
 
 /* NASA channel headers */
@@ -1477,7 +1478,7 @@ input[type=range]::-moz-range-thumb {
   </div>
 
   <button id="startBtn">Iniciar sistema</button>
-  <div class="app-version">v2026.08.14 · 20:25</div>
+  <div class="app-version">v2026.08.14 · 20:50</div>
 </div>
 
 <!-- ═══ APP ═══ -->
@@ -1957,17 +1958,28 @@ function initAlarmAudio() {
 
 // alarm[ch] = { timer, firing, silenced }
 const alarm = {
-  1: { timer: null, firing: false, silenced: false, loopId: null, downSince: null, reason: null },
-  2: { timer: null, firing: false, silenced: false, loopId: null, downSince: null, reason: null },
+  1: { timer: null, firing: false, silenced: false, loopId: null, downSince: null, reason: null, reasonState: null },
+  2: { timer: null, firing: false, silenced: false, loopId: null, downSince: null, reason: null, reasonState: null },
 };
 
 // Human-readable reason from state
 const ALARM_REASONS = {
   offline: 'SIN SEÑAL',
-  error:   'SERVIDOR CAÍDO',
-  stalled: 'SIN DATOS',
+  error:   'STREAM CAÍDO',
+  stalled: 'SERVER SIN RESPUESTA',
   silence: 'DEAD AIR'
 };
+
+// More descriptive reason for the paused overlay — uses live PC internet check
+function detailedAlarmReason(ch) {
+  const baseState = alarm[ch].reasonState;
+  const pcOnline = navigator.onLine;
+  if (!pcOnline) return 'ESTA PC SIN INTERNET';
+  if (baseState === 'error' || baseState === 'offline') return 'SERVIDOR DE STREAM SIN RESPUESTA';
+  if (baseState === 'stalled') return 'SERVIDOR DE STREAM SIN RESPUESTA';
+  if (baseState === 'silence') return 'DEAD AIR · SIN AUDIO';
+  return alarm[ch].reason || 'CAÍDA';
+}
 
 // Update down-timers every second
 setInterval(() => {
@@ -2055,6 +2067,7 @@ function scheduleAlarm(ch, state) {
   const a = alarm[ch];
   // Always update reason to reflect the latest problem
   a.reason = ALARM_REASONS[state] || 'CAÍDA';
+  a.reasonState = state;
   if (a.timer || a.firing) return;
   a.downSince = Date.now();
   console.log('Alarm scheduled ch', ch, 'in', ALARM_DELAY_MS/1000, 's');
@@ -2123,7 +2136,7 @@ function showPausedOverlay(ch, show) {
   const overlays = document.querySelectorAll('.alarm-paused-overlay');
   if (overlays[ch-1]) overlays[ch-1].style.display = show ? 'flex' : 'none';
   const rEl = document.getElementById('pausedReason' + ch);
-  if (rEl) rEl.textContent = alarm[ch].reason ? ('MOTIVO: ' + alarm[ch].reason) : '';
+  if (rEl) rEl.textContent = (alarm[ch].firing || alarm[ch].timer) ? ('MOTIVO: ' + detailedAlarmReason(ch)) : '';
 }
 
 function updateAlarmBtn(ch) {
@@ -2173,14 +2186,25 @@ const stateLabels = {
 };
 
 function diagnose(state, lastFetchOk) {
+  // Layered diagnosis: distinguish local PC issues from server issues.
+  // navigator.onLine tells us if THIS PC lost internet (reliable).
+  const pcHasInternet = navigator.onLine;
+
   if (state === 'error' || state === 'offline') {
-    if (lastFetchOk === false) return { text: 'Servidor sin respuesta', cls: 'bad' };
-    if (lastFetchOk === true)  return { text: 'Corte en red / cliente', cls: 'warn' };
-    return { text: 'Stream caído', cls: 'bad' };
+    if (!pcHasInternet) {
+      return { text: '⚠ ESTA PC SIN INTERNET — revisar conexión local', cls: 'bad' };
+    }
+    if (lastFetchOk === false) {
+      return { text: '⚠ SERVIDOR DE STREAM SIN RESPUESTA', cls: 'bad' };
+    }
+    return { text: '⚠ STREAM INTERRUMPIDO — origen indeterminado', cls: 'bad' };
   }
-  if (state === 'buffering') return { text: 'Problema de red o latencia alta', cls: 'warn' };
-  if (state === 'stalled')   return { text: 'Sin datos del servidor', cls: 'warn' };
-  if (state === 'silence')   return { text: 'Servidor conectado pero sin audio', cls: 'warn' };
+  if (state === 'buffering') return { text: '⚠ CONEXIÓN LENTA O INESTABLE', cls: 'warn' };
+  if (state === 'stalled') {
+    if (!pcHasInternet) return { text: '⚠ ESTA PC SIN INTERNET — revisar conexión local', cls: 'bad' };
+    return { text: '⚠ SERVIDOR DE STREAM SIN RESPUESTA', cls: 'warn' };
+  }
+  if (state === 'silence')   return { text: '⚠ DEAD AIR — servidor conectado pero sin audio', cls: 'warn' };
   if (state === 'online')    return { text: 'Transmisión normal', cls: '' };
   return { text: '', cls: '' };
 }
